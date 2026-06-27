@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Comedor Infantil - Web App</title>
+    <!-- Configuración para PWA (iOS y Android) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Comedor">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3448/3448609.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F172A">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Librería HTML5 QR Code para Escaneo -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <style>
+        :root {
+            --primary: #1E3A8A; /* Azul rey */
+            --primary-light: #3B82F6;
+            --emerald: #059669; /* Verde para asistencia */
+            --emerald-light: #10B981;
+            --amber: #D97706; /* Ámbar para anotaciones */
+            --amber-light: #F59E0B;
+            --bg-dark: #0F172A;
+            --bg-card: #1E293B;
+            --text-light: #F8FAFC;
+            --text-muted: #94A3B8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- Pantalla de Setup/Login --- */
+        #setup-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        }
+
+        .setup-card {
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #0F172A;
+            width: 100%;
+            max-width: 400px;
+            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .setup-logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+        }
+
+        .setup-logo i {
+            font-size: 28px;
+            color: white;
+        }
+
+        .setup-card h2 {
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+
+        .setup-card p {
+            color: #475569;
+            font-size: 12px;
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 14px;
+            top: 29px;
+            color: var(--primary);
+            z-index: 10;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px 12px 10px 38px;
+            border: 1.5px solid #CBD5E1;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+            background-color: white;
+        }
+
+        .input-group select {
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--primary-light);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:active {
+            background-color: #132A66;
+        }
+
+        .btn-disabled {
+            background-color: #E2E8F0 !important;
+            color: #94A3B8 !important;
+            cursor: not-allowed;
+        }
+
+        .message-error {
+            color: #EF4444;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .message-success {
+            color: #10B981;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        /* --- Cabecera Principal --- */
+        header {
+            background-color: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 14px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title h1 {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .header-title span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .status-indicators {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-sync {
+            background-color: var(--amber);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 50px;
+            display: none;
+        }
+
+        .badge-online {
+            background-color: var(--emerald-light);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-offline {
+            background-color: #EF4444;
+        }
+
+        /* --- Contenedor de Pantallas --- */
+        .screen {
+            display: none;
+            flex-direction: column;
+            padding: 16px;
+            flex-grow: 1;
+            padding-bottom: 90px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* --- Cámara y Visor --- */
+        .camera-container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background-color: black;
+            aspect-ratio: 4/3;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #reader, #reader-notes {
+            width: 100%;
+            height: 100%;
+            border: none !important;
+        }
+
+        #reader video, #reader-notes video {
+            object-fit: cover !important;
+        }
+
+        /* Viewfinder Overlay */
+        .viewfinder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 220px;
+            height: 220px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: var(--emerald-light);
+            border-style: solid;
+        }
+
+        .screen-notes .corner {
+            border-color: var(--amber-light);
+        }
+
+        .top-left     { top: 0; left: 0; border-width: 4px 0 0 4px; }
+        .top-right    { top: 0; right: 0; border-width: 4px 4px 0 0; }
+        .bottom-left  { bottom: 0; left: 0; border-width: 0 0 4px 4px; }
+        .bottom-right { bottom: 0; right: 0; border-width: 0 4px 4px 0; }
+
+        .scan-helper-text {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 16px 0;
+            font-weight: 600;
+        }
+
+        /* --- Botón Flotante de Búsqueda --- */
+        .fab-search {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--emerald);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            z-index: 50;
+            transition: transform 0.2s;
+        }
+
+        .screen-notes .fab-search {
+            background-color: var(--amber);
+        }
+
+        .fab-search:active {
+            transform: scale(0.9);
+        }
+
+        /* --- Ventana de Búsqueda Manual (Dialog) --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            color: #0F172A;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            max-height: 85%;
+            animation: slideUpModal 0.3s ease-out;
+        }
+
+        @keyframes slideUpModal {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h3 {
+            font-weight: 800;
+            font-size: 18px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #64748B;
+        }
+
+        .search-input-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-input-container i {
+            position: absolute;
+            left: 14px;
+            top: 15px;
+            color: #64748B;
+        }
+
+        .search-input-container input {
+            width: 100%;
+            padding: 12px 12px 12px 38px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .results-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 20px;
+        }
+
+        .child-result-card {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: #F8FAFC;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid #E2E8F0;
+        }
+
+        .child-result-card:active {
+            background-color: #F1F5F9;
+        }
+
+        .child-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748B;
+            font-size: 18px;
+            margin-right: 12px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .child-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .child-info-summary h4 {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .child-info-summary p {
+            font-size: 11px;
+            color: #64748B;
+            margin-top: 2px;
+        }
+
+        /* --- Dialog de Confirmación de Asistencia / Notas --- */
+        .confirm-card {
+            text-align: center;
+        }
+
+        .confirm-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 40px;
+            color: #64748B;
+            overflow: hidden;
+            border: 3px solid var(--primary-light);
+        }
+
+        .confirm-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .confirm-name {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .confirm-id {
+            font-size: 11px;
+            color: #64748B;
+            margin-bottom: 16px;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: #E2E8F0;
+            margin: 16px 0;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .detail-row label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748B;
+        }
+
+        .pill-travel {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 12px;
+            border-radius: 50px;
+        }
+
+        .pill-travel.si { background-color: #FEE2E2; color: #EF4444; }
+        .pill-travel.no { background-color: #E0F2FE; color: #0284C7; }
+
+        .allergies-box {
+            background-color: #FEE2E2;
+            color: #EF4444;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .allergies-box.safe {
+            background-color: #DCFCE7;
+            color: #16A34A;
+        }
+
+        .note-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            margin-bottom: 16px;
+        }
+
+        .dialog-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .dialog-actions .btn {
+            flex: 1;
+        }
+
+        .btn-outline {
+            border: 1px solid #CBD5E1;
+            background: none;
+            color: #64748B;
+        }
+
+        /* --- Ajustes Screen --- */
+        .settings-card {
+            background-color: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .settings-card h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--primary-light);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .settings-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-light);
+            margin: 8px 0;
+        }
+
+        /* Input / Select oscuros para Ajustes */
+        .input-dark, .select-dark {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            background-color: #1E293B;
+            color: var(--text-light);
+            border-radius: 12px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input-dark:focus, .select-dark:focus {
+            border-color: var(--primary-light);
+        }
+
+        /* --- Barra de Navegación Inferior --- */
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            gap: 4px;
+        }
+
+        .nav-item i {
+            font-size: 18px;
+        }
+
+        .nav-item.active {
+            color: var(--primary-light);
+        }
+
+        .nav-item.emerald.active {
+            color: var(--emerald-light);
+        }
+
+        .nav-item.amber.active {
+            color: var(--amber-light);
+        }
+
+        /* Toast de confirmación rápido */
+        #toast {
+            display: none;
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #10B981;
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 10px 24px;
+            border-radius: 50px;
+            z-index: 500;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            align-items: center;
+            gap: 8px;
+        }
+
+        #toast.error {
+            background-color: #EF4444;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE AJUSTES INICIALES (LOGIN) -->
+    <div id="setup-screen">
+        <div class="setup-card">
+            <div class="setup-logo">
+                <i class="fa-solid fa-utensils"></i>
+            </div>
+            <h2>Comedor Infantil</h2>
+            <p>Ingresa tu nombre y cédula para validarte como operador autorizado en Google Sheets.</p>
+            
+            <div class="input-group">
+                <label>Nombre Completo (en minúsculas)</label>
+                <i class="fa-solid fa-user"></i>
+                <input type="text" id="setup-name" placeholder="Ej. ronald">
+            </div>
+            
+            <div class="input-group">
+                <label>Número de Cédula</label>
+                <i class="fa-solid fa-id-card"></i>
+                <input type="text" inputmode="numeric" id="setup-cedula" placeholder="Ej. 12345678">
+            </div>
+
+            <div class="input-group">
+                <label>Comedor de Trabajo</label>
+                <i class="fa-solid fa-home"></i>
+                <select id="setup-comedor">
+                    <option value="Granadilla">Granadilla</option>
+                    <option value="Tres Ríos">Tres Ríos</option>
+                </select>
+            </div>
+            
+            <div class="input-group">
+                <label>URL de Google Apps Script</label>
+                <i class="fa-solid fa-link"></i>
+                <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+            
+            <button id="setup-btn" class="btn btn-primary" onclick="handleSetupSubmit()">
+                VALIDAR E INGRESAR
+            </button>
+            <div id="setup-error" class="message-error" style="display:none;"></div>
+            <div id="setup-success" class="message-success" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- CABECERA -->
+    <header>
+        <div class="header-title">
+            <h1 id="header-title-text">Control de Asistencia</h1>
+            <span id="header-comedor-sub">Comedor Infantil</span>
+        </div>
+        <div class="status-indicators">
+            <div id="sync-count" class="badge-sync">0</div>
+            <div id="online-badge" class="badge-online">
+                <i class="fa-solid fa-cloud"></i>
+                <span>Online</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- PANTALLA 1: LISTA (ASISTENCIA) -->
+    <div id="screen-attendance" class="screen active">
+        <div class="camera-container">
+            <div id="reader"></div>
+            <div class="viewfinder">
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+            </div>
+        </div>
+        <p class="scan-helper-text">Apunta la cámara al código QR del niño</p>
+        
+        <button class="fab-search" onclick="openSearchModal('attendance')">
+            <i class="fa-solid fa-search"></i>
+        </button>
+    </div>
+
+    <!-- PANTALLA 2: ANOTACIONES -->
+    <div id="screen-notes" class="screen">
+        <div class="camera-container">
+            <div id="reader-notes"></div>
+            <div class="viewfinder">
+                <div class="corner top-left"></div>
+                <div class="corner top-right"></div>
+                <div class="corner bottom-left"></div>
+                <div class="corner bottom-right"></div>
+            </div>
+        </div>
+        <p class="scan-helper-text">Escanea el QR o escribe sus datos para hacer anotaciones</p>
+        
+        <button class="fab-search" onclick="openSearchModal('notes')">
+            <i class="fa-solid fa-search"></i>
+        </button>
+    </div>
+
+    <!-- PANTALLA 3: AJUSTES -->
+    <div id="screen-settings" class="screen">
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-user-gear"></i> Datos del Operador</h3>
+            <div class="input-group" style="margin-top: 8px;">
+                <label>Nombre del Operador</label>
+                <input type="text" id="settings-name" class="input-dark">
+            </div>
+            <div class="input-group">
+                <label>Cédula del Operador</label>
+                <input type="text" inputmode="numeric" id="settings-cedula" class="input-dark">
+            </div>
+            <div class="input-group" style="position: relative;">
+                <label>Comedor Activo</label>
+                <select id="settings-comedor" class="select-dark">
+                    <option value="Granadilla">Granadilla</option>
+                    <option value="Tres Ríos">Tres Ríos</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>URL de Apps Script</label>
+                <input type="text" id="settings-url" class="input-dark">
+            </div>
+            <button class="btn btn-primary" onclick="updateSettings()">GUARDAR Y RE-VALIDAR</button>
+            <div id="settings-error" class="message-error" style="display:none; text-align: center;"></div>
+        </div>
+
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-database"></i> Base de Datos Local</h3>
+            <p>Niños descargados desde Google Sheets para buscar sin internet:</p>
+            <div id="children-count" class="settings-value">0 niños</div>
+            <button class="btn btn-primary" style="background-color: var(--emerald);" onclick="syncChildrenCatalog()">
+                <i class="fa-solid fa-rotate"></i> ACTUALIZAR CATÁLOGO
+            </button>
+        </div>
+
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-wifi"></i> Prueba de Conexión</h3>
+            <p>Verifica si tienes acceso directo al Google Sheets:</p>
+            <button class="btn btn-outline" style="color: white; border-color: rgba(255,255,255,0.2);" onclick="testConnection()">
+                PROBAR CONEXIÓN
+            </button>
+            <div id="test-result" style="margin-top: 8px; font-weight: 700; font-size: 13px; text-align: center;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE BÚSQUEDA MANUAL -->
+    <div id="search-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="search-modal-title">Buscar Niño</h3>
+                <button class="modal-close" onclick="closeSearchModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="search-input-container">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="search-query" oninput="performFuzzySearch()" placeholder="Escribe el nombre o apellido...">
+            </div>
+            <div id="search-results" class="results-list">
+                <!-- Se rellena con JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMACIÓN / FORMULARIO -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content confirm-card">
+            <div class="modal-header" style="justify-content: flex-end; margin-bottom: 0;">
+                <button class="modal-close" onclick="closeConfirmModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="confirm-avatar" id="confirm-avatar-box">
+                <i class="fa-solid fa-user"></i>
+            </div>
+            
+            <h3 class="confirm-name" id="confirm-name">Cargando...</h3>
+            <p class="confirm-id" id="confirm-id">ID: -</p>
+            
+            <div class="divider"></div>
+            
+            <!-- Detalles del Niño -->
+            <div class="detail-row">
+                <label>¿Viaja Solo?</label>
+                <span id="confirm-travel" class="pill-travel no">No</span>
+            </div>
+            
+            <div class="detail-row" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                <label>Alergias:</label>
+                <div id="confirm-allergies" class="allergies-box safe">Ninguna</div>
+            </div>
+            
+            <div id="confirm-info-row" class="detail-row" style="flex-direction: column; align-items: flex-start; gap: 4px; display: none;">
+                <label>Información Adicional:</label>
+                <p id="confirm-info" style="font-size: 13px; color: #475569;"></p>
+            </div>
+
+            <!-- Campo de Texto para Anotaciones (Solo modo Anotaciones) -->
+            <div id="note-input-container" style="display: none; width: 100%;">
+                <label style="display: block; text-align: left; font-size: 13px; font-weight: 600; color: #64748B; margin-bottom: 6px;">
+                    Anotación:
+                </label>
+                <textarea id="note-text" class="note-textarea" placeholder="Escribe la observación aquí..."></textarea>
+            </div>
+
+            <div class="dialog-actions">
+                <button class="btn btn-outline" onclick="closeConfirmModal()">CANCELAR</button>
+                <button id="btn-submit" class="btn btn-primary" onclick="submitRegistration()">ACEPTAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST DE STATUS -->
+    <div id="toast">
+        <i id="toast-icon" class="fa-solid fa-circle-check"></i>
+        <span id="toast-text">Éxito</span>
+    </div>
+
+    <!-- NAVEGACIÓN -->
+    <nav>
+        <div class="nav-item active emerald" id="nav-attendance" onclick="switchTab('attendance')">
+            <i class="fa-solid fa-list-check"></i>
+            <span>Lista</span>
+        </div>
+        <div class="nav-item amber" id="nav-notes" onclick="switchTab('notes')">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Anotación</span>
+        </div>
+        <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+            <i class="fa-solid fa-gears"></i>
+            <span>Ajustes</span>
+        </div>
+    </nav>
+
+    <!-- LÓGICA DE JAVASCRIPT -->
+    <script>
+        // ---- ESTADO DE LA APP ----
+        let appState = {
+            operatorName: "",
+            operatorCedula: "",
+            scriptUrl: "",
+            selectedComedor: "Granadilla",
+            isSetupDone: false,
+            currentTab: "attendance", // "attendance", "notes", "settings"
+            children: [],
+            pendingSync: [],
+            isOnline: true,
+            scannerActive: false,
+            scanner: null,
+            scannerOp: null, // Cadena de promesas para serializar arranque/parada de cámara
+            activeChild: null, // Niño escaneado/seleccionado actualmente
+            searchMode: "attendance" // "attendance" o "notes"
+        };
+
+        // ---- INICIALIZACIÓN ----
+        window.addEventListener('load', () => {
+            loadSettings();
+            checkOnlineStatus();
+
+            // Registrar Service Worker (permite instalar la app y abrirla sin internet)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').catch(err => {
+                    console.warn('No se pudo registrar el Service Worker:', err);
+                });
+            }
+            
+            // Ciclo de monitoreo de conexión y sincronización cada 15 segundos
+            setInterval(() => {
+                checkOnlineStatus();
+                if (appState.isOnline && appState.pendingSync.length > 0) {
+                    syncPendingData();
+                }
+            }, 15000);
+
+            // Escuchar cambios de red del navegador
+            window.addEventListener('online', checkOnlineStatus);
+            window.addEventListener('offline', checkOnlineStatus);
+        });
+
+        // ---- CARGAR AJUSTES ----
+        function loadSettings() {
+            appState.operatorName = localStorage.getItem("operator_name") || "";
+            appState.operatorCedula = localStorage.getItem("operator_cedula") || "";
+            appState.scriptUrl = localStorage.getItem("script_url") || "";
+            appState.selectedComedor = localStorage.getItem("selected_comedor") || "Granadilla";
+            appState.isSetupDone = localStorage.getItem("setup_done") === "true";
+            
+            // Cargar niños locales
+            appState.children = JSON.parse(localStorage.getItem("children_catalog")) || [];
+            document.getElementById("children-count").innerText = `${appState.children.length} niños`;
+
+            // Cargar pendientes
+            appState.pendingSync = JSON.parse(localStorage.getItem("pending_sync")) || [];
+            updatePendingBadge();
+
+            // Sincronizar UI de comedor en cabecera
+            document.getElementById("header-comedor-sub").innerText = `Comedor: ${appState.selectedComedor}`;
+
+            if (appState.isSetupDone) {
+                document.getElementById("setup-screen").style.display = "none";
+                document.getElementById("settings-name").value = appState.operatorName;
+                document.getElementById("settings-cedula").value = appState.operatorCedula;
+                document.getElementById("settings-url").value = appState.scriptUrl;
+                document.getElementById("settings-comedor").value = appState.selectedComedor;
+                startScanner();
+            } else {
+                document.getElementById("setup-screen").style.display = "flex";
+            }
+        }
+
+        // ---- MONITOREO DE RED ----
+        function checkOnlineStatus() {
+            appState.isOnline = navigator.onLine;
+            const badge = document.getElementById("online-badge");
+            if (appState.isOnline) {
+                badge.className = "badge-online";
+                badge.querySelector("span").innerText = "Online";
+                badge.querySelector("i").className = "fa-solid fa-cloud";
+            } else {
+                badge.className = "badge-online badge-offline";
+                badge.querySelector("span").innerText = "Offline";
+                badge.querySelector("i").className = "fa-solid fa-cloud-showers-heavy";
+            }
+        }
+
+        // ---- REGISTRO Y AJUSTES INICIALES (LOGIN) ----
+        async function handleSetupSubmit() {
+            const name = document.getElementById("setup-name").value.trim();
+            const cedula = document.getElementById("setup-cedula").value.trim();
+            const url = document.getElementById("setup-url").value.trim();
+            const comedor = document.getElementById("setup-comedor").value;
+            const btn = document.getElementById("setup-btn");
+            const errDiv = document.getElementById("setup-error");
+            const succDiv = document.getElementById("setup-success");
+
+            if (!name || !cedula || !url) {
+                showMsg(errDiv, "Por favor completa todos los campos.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.classList.add("btn-disabled");
+            btn.innerText = "VALIDANDO CONEXIÓN...";
+            errDiv.style.display = "none";
+            succDiv.style.display = "none";
+
+            try {
+                // Petición GET al Apps Script para validar operador
+                const validationUrl = `${url}?action=validateOperator&name=${encodeURIComponent(name)}&cedula=${encodeURIComponent(cedula)}`;
+                const response = await fetch(validationUrl);
+                const result = await response.json();
+
+                if (result.status === "ok" && result.authorized) {
+                    showMsg(succDiv, "¡Operador autorizado!");
+                    
+                    // Guardar en local
+                    localStorage.setItem("operator_name", name);
+                    localStorage.setItem("operator_cedula", cedula);
+                    localStorage.setItem("script_url", url);
+                    localStorage.setItem("selected_comedor", comedor);
+                    localStorage.setItem("setup_done", "true");
+                    
+                    appState.operatorName = name;
+                    appState.operatorCedula = cedula;
+                    appState.scriptUrl = url;
+                    appState.selectedComedor = comedor;
+                    appState.isSetupDone = true;
+
+                    document.getElementById("header-comedor-sub").innerText = `Comedor: ${comedor}`;
+
+                    // Bajar catálogo de niños de inmediato
+                    await syncChildrenCatalog();
+
+                    setTimeout(() => {
+                        document.getElementById("setup-screen").style.display = "none";
+                        // Rellenar pantalla de ajustes
+                        document.getElementById("settings-name").value = name;
+                        document.getElementById("settings-cedula").value = cedula;
+                        document.getElementById("settings-url").value = url;
+                        document.getElementById("settings-comedor").value = comedor;
+                        switchTab("attendance");
+                    }, 1000);
+                } else {
+                    showMsg(errDiv, "Operador no autorizado en el sistema.");
+                    btn.disabled = false;
+                    btn.classList.remove("btn-disabled");
+                    btn.innerText = "VALIDAR E INGRESAR";
+                }
+            } catch (e) {
+                showMsg(errDiv, "Error al conectar. Verifica la URL y tu conexión.");
+                btn.disabled = false;
+                btn.classList.remove("btn-disabled");
+                btn.innerText = "VALIDAR E INGRESAR";
+            }
+        }
+
+        // ---- ACTUALIZAR AJUSTES ----
+        async function updateSettings() {
+            const name = document.getElementById("settings-name").value.trim();
+            const cedula = document.getElementById("settings-cedula").value.trim();
+            const url = document.getElementById("settings-url").value.trim();
+            const comedor = document.getElementById("settings-comedor").value;
+            const errDiv = document.getElementById("settings-error");
+
+            if (!name || !cedula || !url) {
+                errDiv.innerText = "Los campos no pueden estar vacíos.";
+                errDiv.style.display = "block";
+                return;
+            }
+
+            errDiv.style.display = "none";
+            
+            const hasComedorChanged = comedor !== appState.selectedComedor;
+
+            if (name === appState.operatorName && cedula === appState.operatorCedula && url === appState.scriptUrl && !hasComedorChanged) {
+                showToast("Ajustes sin cambios", false);
+                return;
+            }
+
+            try {
+                showToast("Validando...", false);
+                const validationUrl = `${url}?action=validateOperator&name=${encodeURIComponent(name)}&cedula=${encodeURIComponent(cedula)}`;
+                const response = await fetch(validationUrl);
+                const result = await response.json();
+
+                if (result.status === "ok" && result.authorized) {
+                    localStorage.setItem("operator_name", name);
+                    localStorage.setItem("operator_cedula", cedula);
+                    localStorage.setItem("script_url", url);
+                    localStorage.setItem("selected_comedor", comedor);
+                    
+                    appState.operatorName = name;
+                    appState.operatorCedula = cedula;
+                    appState.scriptUrl = url;
+                    appState.selectedComedor = comedor;
+
+                    document.getElementById("header-comedor-sub").innerText = `Comedor: ${comedor}`;
+                    
+                    showToast("Ajustes guardados con éxito", false);
+
+                    // Si cambió el comedor, forzar descarga del nuevo catálogo
+                    if (hasComedorChanged) {
+                        await syncChildrenCatalog();
+                    }
+                } else {
+                    errDiv.innerText = "Error: Operador no autorizado. No se aplicaron los cambios.";
+                    errDiv.style.display = "block";
+                }
+            } catch (e) {
+                errDiv.innerText = "Error al validar operador. Conexión fallida.";
+                errDiv.style.display = "block";
+            }
+        }
+
+        function showMsg(div, text) {
+            div.innerText = text;
+            div.style.display = "block";
+        }
+
+        // ---- NAVEGACIÓN ENTRE PESTAÑAS ----
+        function switchTab(tabName) {
+            if (appState.currentTab === tabName) return;
+            
+            // Desactivar clase activa en navegación
+            document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+            // Activar pestaña elegida
+            document.getElementById(`nav-${tabName === 'attendance' ? 'attendance' : tabName === 'notes' ? 'notes' : 'settings'}`).classList.add("active");
+
+            // Desactivar pantallas
+            document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+            // Activar pantalla elegida
+            document.getElementById(`screen-${tabName === 'notes' ? 'notes' : tabName === 'settings' ? 'settings' : 'attendance'}`).classList.add("active");
+
+            // Cambiar titulo en cabecera
+            const title = document.getElementById("header-title-text");
+            if (tabName === "attendance") title.innerText = "Control de Asistencia";
+            else if (tabName === "notes") title.innerText = "Anotaciones";
+            else title.innerText = "Ajustes";
+
+            appState.currentTab = tabName;
+            
+            // Manejar cámara
+            stopScanner();
+            if (tabName === "attendance" || tabName === "notes") {
+                startScanner();
+            }
+        }
+
+        // ---- MANEJO DEL ESCÁNER DE CÁMARA ----
+        // Serializamos arranque/parada en una sola cadena de promesas para evitar
+        // la condición de carrera "Cannot start, scanner is already running".
+        function startScanner() {
+            appState.scannerOp = Promise.resolve(appState.scannerOp).then(doStartScanner).catch(() => {});
+            return appState.scannerOp;
+        }
+
+        function stopScanner() {
+            appState.scannerOp = Promise.resolve(appState.scannerOp).then(doStopScanner).catch(() => {});
+            return appState.scannerOp;
+        }
+
+        async function doStartScanner() {
+            if (!appState.isSetupDone) return;
+            // Asegurar que cualquier instancia previa quede detenida antes de crear otra.
+            await doStopScanner();
+
+            const targetElementId = appState.currentTab === "notes" ? "reader-notes" : "reader";
+            const config = {
+                fps: 10,
+                qrbox: { width: 220, height: 220 },
+                aspectRatio: 1.333333 // 4:3
+            };
+
+            try {
+                const scanner = new Html5Qrcode(targetElementId);
+                appState.scanner = scanner;
+                appState.scannerActive = true;
+                await scanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    onQrScanSuccess,
+                    onQrScanFailure
+                );
+            } catch (err) {
+                console.error("No se pudo iniciar la cámara", err);
+                appState.scannerActive = false;
+                appState.scanner = null;
+            }
+        }
+
+        async function doStopScanner() {
+            appState.scannerActive = false;
+            const scanner = appState.scanner;
+            appState.scanner = null;
+            if (scanner) {
+                try { await scanner.stop(); } catch (e) { /* ya estaba detenido */ }
+                try { scanner.clear(); } catch (e) {}
+            }
+        }
+
+        function onQrScanSuccess(decodedText, decodedResult) {
+            // Prevenir lecturas repetidas rápidas (debouncing)
+            stopScanner();
+            
+            // Buscar al niño por ID
+            const child = appState.children.find(c => c.id.toLowerCase() === decodedText.trim().toLowerCase());
+            if (child) {
+                openConfirmModal(child);
+            } else {
+                showToast("Código no registrado", true);
+                // Reiniciar cámara tras un retardo
+                setTimeout(() => {
+                    if (appState.currentTab === "attendance" || appState.currentTab === "notes") startScanner();
+                }, 3000);
+            }
+        }
+
+        function onQrScanFailure(error) {
+            // Ignorar fallas de lectura (suceden frame por frame)
+        }
+
+        // ---- COINCIDENCIA FONÉTICA FLEXIBLE (JAVASCRIPT) ----
+        function normalizeSpanishPhonetic(text) {
+            if (!text) return "";
+            let result = text.toLowerCase().trim();
+            
+            // 1. Quitar acentos/diacríticos
+            result = result.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            // 2. ch
+            result = result.replace(/ch/g, "TEMP_CH");
+            
+            // 3. h muda
+            result = result.replace(/h/g, "");
+            
+            // 4. Restaurar ch
+            result = result.replace(/TEMP_CH/g, "ch");
+            
+            // 5. v -> b
+            result = result.replace(/v/g, "b");
+            
+            // 6. z -> s
+            result = result.replace(/z/g, "s");
+            
+            // 7. c (antes de e,i) -> s
+            result = result.replace(/c(?=[ei])/g, "s");
+            
+            // 8. ll/y -> i
+            result = result.replace(/ll/g, "i");
+            result = result.replace(/y/g, "i");
+            
+            // 9. x -> s
+            result = result.replace(/x/g, "s");
+            
+            // 10. Simplificar repetidas (ss -> s, rr -> r)
+            let simplified = "";
+            let lastChar = "";
+            for (let char of result) {
+                if (char !== lastChar) {
+                    simplified += char;
+                    lastChar = char;
+                }
+            }
+            return simplified;
+        }
+
+        function levenshteinDistance(s1, s2) {
+            const dp = Array(s1.length + 1).fill(null).map(() => Array(s2.length + 1).fill(0));
+            for (let i = 0; i <= s1.length; i++) dp[i][0] = i;
+            for (let j = 0; j <= s2.length; j++) dp[0][j] = j;
+
+            for (let i = 1; i <= s1.length; i++) {
+                for (let j = 1; j <= s2.length; j++) {
+                    const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+                    dp[i][j] = Math.min(
+                        dp[i - 1][j] + 1,
+                        dp[i][j - 1] + 1,
+                        dp[i - 1][j - 1] + cost
+                    );
+                }
+            }
+            return dp[s1.length][s2.length];
+        }
+
+        function isFlexibleMatch(childName, query) {
+            const cleanQuery = normalizeSpanishPhonetic(query);
+            const cleanName = normalizeSpanishPhonetic(childName);
+
+            if (!cleanQuery || !cleanName) return false;
+
+            // 1. Contiene subcadena
+            if (cleanName.includes(cleanQuery) || cleanQuery.includes(cleanName)) {
+                return true;
+            }
+
+            // 2. Dividir por palabras
+            const queryWords = cleanQuery.split(" ").filter(w => w.length >= 3);
+            const nameWords = cleanName.split(" ").filter(w => w.length >= 3);
+
+            for (let qw of queryWords) {
+                for (let nw of nameWords) {
+                    if (nw.includes(qw) || qw.includes(nw) || levenshteinDistance(qw, nw) <= 1) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // ---- MODAL DE BÚSQUEDA MANUAL ----
+        function openSearchModal(mode) {
+            appState.searchMode = mode;
+            stopScanner();
+            
+            document.getElementById("search-query").value = "";
+            document.getElementById("search-results").innerHTML = "";
+            document.getElementById("search-modal-title").innerText = mode === "attendance" ? "Buscar para Asistencia" : "Buscar para Anotación";
+            document.getElementById("search-modal").classList.add("active");
+            
+            // Mostrar todos los niños por defecto
+            performFuzzySearch();
+        }
+
+        function closeSearchModal() {
+            document.getElementById("search-modal").classList.remove("active");
+            if (appState.currentTab === "attendance" || appState.currentTab === "notes") {
+                startScanner();
+            }
+        }
+
+        function performFuzzySearch() {
+            const query = document.getElementById("search-query").value.trim();
+            const resultsContainer = document.getElementById("search-results");
+            resultsContainer.innerHTML = "";
+
+            let filtered = [];
+            if (!query) {
+                filtered = appState.children;
+            } else {
+                filtered = appState.children.filter(c => isFlexibleMatch(c.name, query));
+            }
+
+            if (filtered.length === 0) {
+                resultsContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px;">No hay resultados.</div>`;
+                return;
+            }
+
+            filtered.forEach(child => {
+                const card = document.createElement("div");
+                card.className = "child-result-card";
+                card.onclick = () => {
+                    closeSearchModal();
+                    openConfirmModal(child);
+                };
+
+                const avatar = child.photoUrl
+                    ? `<div class="child-avatar"><img src="${escapeHtml(child.photoUrl)}" alt=""></div>`
+                    : `<div class="child-avatar"><i class="fa-solid fa-user"></i></div>`;
+
+                card.innerHTML = `
+                    ${avatar}
+                    <div class="child-info-summary">
+                        <h4>${escapeHtml(child.name)}</h4>
+                        <p>Alergias: ${escapeHtml(child.allergies || 'Ninguna')}</p>
+                    </div>
+                `;
+                resultsContainer.appendChild(card);
+            });
+        }
+
+        // ---- DIALOG DE CONFIRMACIÓN / FORMULARIO ----
+        function openConfirmModal(child) {
+            appState.activeChild = child;
+            
+            document.getElementById("confirm-name").innerText = child.name;
+            document.getElementById("confirm-id").innerText = `ID: ${child.id}`;
+            
+            // Foto
+            const avatarBox = document.getElementById("confirm-avatar-box");
+            if (child.photoUrl) {
+                avatarBox.innerHTML = `<img src="${escapeHtml(child.photoUrl)}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                avatarBox.innerHTML = `<i class="fa-solid fa-user"></i>`;
+            }
+
+            // Viaja solo
+            const travelSpan = document.getElementById("confirm-travel");
+            travelSpan.innerText = child.travelsAlone;
+            travelSpan.className = child.travelsAlone.toLowerCase() === "sí" ? "pill-travel si" : "pill-travel no";
+
+            // Alergias
+            const allergiesBox = document.getElementById("confirm-allergies");
+            allergiesBox.innerText = child.allergies || "Ninguna";
+            if (!child.allergies || child.allergies.toLowerCase() === "ninguna") {
+                allergiesBox.className = "allergies-box safe";
+            } else {
+                allergiesBox.className = "allergies-box";
+            }
+
+            // Info adicional
+            const infoRow = document.getElementById("confirm-info-row");
+            if (child.additionalInfo) {
+                document.getElementById("confirm-info").innerText = child.additionalInfo;
+                infoRow.style.display = "block";
+            } else {
+                infoRow.style.display = "none";
+            }
+
+            // Configurar botones según la pestaña
+            const submitBtn = document.getElementById("btn-submit");
+            const noteContainer = document.getElementById("note-input-container");
+
+            if (appState.currentTab === "notes") {
+                noteContainer.style.display = "block";
+                document.getElementById("note-text").value = "";
+                submitBtn.innerText = "GUARDAR ANOTACIÓN";
+                submitBtn.style.backgroundColor = "var(--amber)";
+            } else {
+                noteContainer.style.display = "none";
+                submitBtn.innerText = "ACEPTAR ASISTENCIA";
+                submitBtn.style.backgroundColor = "var(--emerald)";
+            }
+
+            document.getElementById("confirm-modal").classList.add("active");
+        }
+
+        function closeConfirmModal() {
+            document.getElementById("confirm-modal").classList.remove("active");
+            appState.activeChild = null;
+            if (appState.currentTab === "attendance" || appState.currentTab === "notes") {
+                startScanner();
+            }
+        }
+
+        // ---- GUARDAR / REGISTRAR ASISTENCIA Y NOTAS ----
+        async function submitRegistration() {
+            const child = appState.activeChild;
+            if (!child) return;
+
+            const tab = appState.currentTab;
+            const now = new Date();
+            const dateStr = formatDate(now);
+            const timeStr = formatTime(now);
+
+            let syncPayload = {
+                date: dateStr,
+                time: timeStr,
+                childId: child.id,
+                childName: child.name,
+                operatorName: appState.operatorName,
+                operatorCedula: appState.operatorCedula,
+                comedor: appState.selectedComedor,
+                uuid: generateUuid() // Identificador único para evitar duplicados en el servidor
+            };
+
+            if (tab === "notes") {
+                const noteText = document.getElementById("note-text").value.trim();
+                if (!noteText) {
+                    showToast("Por favor escribe una anotación.", true);
+                    return;
+                }
+                syncPayload.action = "addNote";
+                syncPayload.note = noteText;
+            } else {
+                syncPayload.action = "addAttendance";
+            }
+
+            // Guardar localmente en el buffer temporal
+            appState.pendingSync.push(syncPayload);
+            localStorage.setItem("pending_sync", JSON.stringify(appState.pendingSync));
+            updatePendingBadge();
+
+            closeConfirmModal();
+
+            showToast(tab === "notes" ? "Anotación guardada en el celular" : "Asistencia marcada en el celular", false);
+
+            // Intentar subir inmediatamente si está conectado
+            if (appState.isOnline) {
+                syncPendingData();
+            }
+        }
+
+        // ---- SINCRONIZAR PENDIENTES ----
+        async function syncPendingData() {
+            if (appState.pendingSync.length === 0 || !appState.isOnline || !appState.scriptUrl) return;
+
+            const toSync = [...appState.pendingSync];
+            let successCount = 0;
+
+            for (let item of toSync) {
+                try {
+                    // Usamos Content-Type "text/plain" para evitar el preflight CORS
+                    // (Apps Script no responde a OPTIONS). Así SÍ podemos leer la
+                    // respuesta y confirmar que el dato se guardó realmente.
+                    const response = await fetch(appState.scriptUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify(item)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === "ok") {
+                        // Confirmado por el servidor: lo quitamos de la cola.
+                        successCount++;
+                    } else {
+                        // El servidor respondió pero rechazó el registro
+                        // (ej. operador no autorizado). No lo perdemos: queda pendiente.
+                        console.error("El servidor rechazó el registro:", result.message);
+                        break;
+                    }
+                } catch (e) {
+                    // Error de red o respuesta ilegible: conservamos el pendiente.
+                    console.error("Error al subir registro", e);
+                    break;
+                }
+            }
+
+            if (successCount > 0) {
+                appState.pendingSync.splice(0, successCount);
+                localStorage.setItem("pending_sync", JSON.stringify(appState.pendingSync));
+                updatePendingBadge();
+                showToast(`Sincronizados ${successCount} registros a Sheets`, false);
+            }
+        }
+
+        function updatePendingBadge() {
+            const badge = document.getElementById("sync-count");
+            if (appState.pendingSync.length > 0) {
+                badge.innerText = appState.pendingSync.length;
+                badge.style.display = "block";
+            } else {
+                badge.style.display = "none";
+            }
+        }
+
+        // ---- DESCARGAR CATÁLOGO DE NIÑOS ----
+        async function syncChildrenCatalog() {
+            if (!appState.isOnline || !appState.scriptUrl) {
+                showToast("Sin internet o URL vacía", true);
+                return;
+            }
+
+            try {
+                showToast("Sincronizando catálogo...", false);
+                const response = await fetch(`${appState.scriptUrl}?action=getChildren&comedor=${encodeURIComponent(appState.selectedComedor)}`);
+                const result = await response.json();
+
+                if (result.status === "ok") {
+                    appState.children = result.data;
+                    localStorage.setItem("children_catalog", JSON.stringify(result.data));
+                    document.getElementById("children-count").innerText = `${result.data.length} niños`;
+                    showToast("¡Catálogo local actualizado!", false);
+                } else {
+                    showToast("Error de servidor", true);
+                }
+            } catch (e) {
+                showToast("Error de conexión al catálogo", true);
+            }
+        }
+
+        // ---- PROBAR CONEXIÓN EN AJUSTES ----
+        async function testConnection() {
+            const resDiv = document.getElementById("test-result");
+            if (!appState.isOnline) {
+                resDiv.innerText = "✗ Sin conexión a internet.";
+                resDiv.style.color = "#EF4444";
+                return;
+            }
+            if (!appState.scriptUrl) {
+                resDiv.innerText = "✗ URL vacía.";
+                resDiv.style.color = "#EF4444";
+                return;
+            }
+
+            resDiv.innerText = "Probando conexión...";
+            resDiv.style.color = "white";
+
+            try {
+                const response = await fetch(`${appState.scriptUrl}?action=ping`);
+                const result = await response.json();
+                if (result.status === "ok") {
+                    resDiv.innerText = "✓ Conectado correctamente a Google Sheets.";
+                    resDiv.style.color = "#10B981";
+                } else {
+                    resDiv.innerText = `✗ Respuesta inválida: ${result.message}`;
+                    resDiv.style.color = "#EF4444";
+                }
+            } catch (e) {
+                resDiv.innerText = "✗ Error de conexión. Revisa la URL.";
+                resDiv.style.color = "#EF4444";
+            }
+        }
+
+        // ---- UTILIDADES ----
+        function generateUuid() {
+            if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+            // Respaldo para navegadores sin crypto.randomUUID
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Escapa texto para insertarlo de forma segura en HTML (evita inyección/roturas).
+        function escapeHtml(str) {
+            return String(str == null ? "" : str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // ---- UTILIDADES DE FORMATO ----
+        function formatDate(date) {
+            const dd = String(date.getDate()).padStart(2, '0');
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const yyyy = date.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+        }
+
+        function formatTime(date) {
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            const ss = String(date.getSeconds()).padStart(2, '0');
+            return `${hh}:${mm}:${ss}`;
+        }
+
+        function showToast(text, isError) {
+            const toast = document.getElementById("toast");
+            const icon = document.getElementById("toast-icon");
+            const txt = document.getElementById("toast-text");
+
+            txt.innerText = text;
+            if (isError) {
+                toast.classList.add("error");
+                icon.className = "fa-solid fa-circle-exclamation";
+            } else {
+                toast.classList.remove("error");
+                icon.className = "fa-solid fa-circle-check";
+            }
+
+            toast.style.display = "flex";
+            setTimeout(() => {
+                toast.style.display = "none";
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
