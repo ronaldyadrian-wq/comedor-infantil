@@ -888,6 +888,14 @@
             </button>
             <div id="test-result" style="margin-top: 8px; font-weight: 700; font-size: 13px; text-align: center;"></div>
         </div>
+
+        <div class="settings-card">
+            <h3><i class="fa-solid fa-right-from-bracket"></i> Sesión</h3>
+            <p>Cierra la sesión del operador actual para que ingrese otro. Se conserva la URL y los registros pendientes de subir.</p>
+            <button class="btn" style="background-color: #EF4444; color: white;" onclick="logout()">
+                <i class="fa-solid fa-right-from-bracket"></i> CERRAR SESIÓN
+            </button>
+        </div>
     </div>
 
     <!-- MODAL DE BÚSQUEDA MANUAL -->
@@ -1199,6 +1207,42 @@
         function showMsg(div, text) {
             div.innerText = text;
             div.style.display = "block";
+        }
+
+        // ---- CERRAR SESIÓN ----
+        function logout() {
+            if (!confirm("¿Cerrar la sesión del operador actual? La URL y los registros pendientes se conservan.")) {
+                return;
+            }
+
+            // Detener la cámara antes de salir
+            stopScanner();
+
+            // Borrar solo los datos del operador; conservar URL, comedor,
+            // catálogo de niños y registros pendientes de subir.
+            localStorage.removeItem("operator_name");
+            localStorage.removeItem("operator_cedula");
+            localStorage.removeItem("setup_done");
+
+            appState.operatorName = "";
+            appState.operatorCedula = "";
+            appState.isSetupDone = false;
+
+            // Limpiar nombre/cédula en la pantalla de inicio, pero dejar
+            // la URL y el comedor ya rellenados para comodidad.
+            document.getElementById("setup-name").value = "";
+            document.getElementById("setup-cedula").value = "";
+            document.getElementById("setup-url").value = appState.scriptUrl || "";
+            document.getElementById("setup-comedor").value = appState.selectedComedor || "Granadilla";
+            document.getElementById("setup-error").style.display = "none";
+            document.getElementById("setup-success").style.display = "none";
+            const btn = document.getElementById("setup-btn");
+            btn.disabled = false;
+            btn.classList.remove("btn-disabled");
+            btn.innerText = "VALIDAR E INGRESAR";
+
+            // Volver a la pantalla de inicio
+            document.getElementById("setup-screen").style.display = "flex";
         }
 
         // ---- NAVEGACIÓN ENTRE PESTAÑAS ----
