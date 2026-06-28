@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Comedor">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3448/3448609.png">
+    <link rel="apple-touch-icon" href="logo-icono.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0F172A">
     
@@ -87,20 +87,19 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-        .setup-logo {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            border-radius: 20px;
+        .setup-logos {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 12px;
+            gap: 10px;
+            margin-bottom: 14px;
         }
 
-        .setup-logo i {
-            font-size: 28px;
-            color: white;
+        .setup-logo-img {
+            width: 100%;
+            max-width: 240px;
+            height: auto;
+            object-fit: contain;
         }
 
         .setup-card h2 {
@@ -218,8 +217,29 @@
             align-items: center;
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .header-logo-chip {
+            background: #FFFFFF;
+            border-radius: 8px;
+            padding: 4px 7px;
+            display: inline-flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .header-logo-chip img {
+            height: 24px;
+            display: block;
+        }
+
         .header-title h1 {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
         }
 
@@ -726,8 +746,9 @@
     <!-- PANTALLA DE AJUSTES INICIALES (LOGIN) -->
     <div id="setup-screen">
         <div class="setup-card">
-            <div class="setup-logo">
-                <i class="fa-solid fa-utensils"></i>
+            <div class="setup-logos">
+                <img src="logo-conectados.png" alt="Conectados" class="setup-logo-img">
+                <img src="logo-manitas.png" alt="Manitas a la mesa" class="setup-logo-img">
             </div>
             <h2>Comedor Infantil</h2>
             <p>Ingresa tu nombre y cédula para validarte como operador autorizado en Google Sheets.</p>
@@ -769,9 +790,14 @@
 
     <!-- CABECERA -->
     <header>
-        <div class="header-title">
-            <h1 id="header-title-text">Control de Asistencia</h1>
-            <span id="header-comedor-sub">Comedor Infantil</span>
+        <div class="header-left">
+            <span class="header-logo-chip">
+                <img src="logo-manitas.png" alt="Manitas a la mesa">
+            </span>
+            <div class="header-title">
+                <h1 id="header-title-text">Control de Asistencia</h1>
+                <span id="header-comedor-sub">Comedor Infantil</span>
+            </div>
         </div>
         <div class="status-indicators">
             <div id="sync-count" class="badge-sync">0</div>
