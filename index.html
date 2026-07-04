@@ -1000,6 +1000,9 @@
             scannerActive: false,
             scanner: null,
             scannerOp: null, // Cadena de promesas para serializar arranque/parada de cámara
+            isSyncing: false, // Candado: evita dos sincronizaciones simultáneas (causaba filas dobles)
+            qrCandidate: null, // Doble lectura: código leído a la espera de confirmarse
+            qrCandidateTime: 0,
             activeChild: null, // Niño escaneado/seleccionado actualmente
             searchMode: "attendance" // "attendance" o "notes"
         };
@@ -1027,6 +1030,21 @@
             // Escuchar cambios de red del navegador
             window.addEventListener('online', checkOnlineStatus);
             window.addEventListener('offline', checkOnlineStatus);
+
+            // Reiniciar la cámara al volver a la app: al salir a la pantalla de
+            // inicio el navegador corta el video y la cámara quedaba en negro.
+            document.addEventListener('visibilitychange', () => {
+                if (!appState.isSetupDone) return;
+                if (document.visibilityState === 'hidden') {
+                    stopScanner();
+                } else {
+                    const modalAbierto = document.getElementById("search-modal").classList.contains("active") ||
+                                         document.getElementById("confirm-modal").classList.contains("active");
+                    if (!modalAbierto && (appState.currentTab === "attendance" || appState.currentTab === "notes")) {
+                        startScanner();
+                    }
+                }
+            });
         });
 
         // ---- CARGAR AJUSTES ----
@@ -1299,10 +1317,16 @@
             await doStopScanner();
 
             const targetElementId = appState.currentTab === "notes" ? "reader-notes" : "reader";
+            // Sin "qrbox": se analiza TODO el encuadre (más fácil apuntar) y se
+            // elimina el recuadro blanco deformado que dibujaba la librería.
+            // Resolución 1280x720 para leer bien los QR pequeños (2.5 cm).
             const config = {
-                fps: 10,
-                qrbox: { width: 220, height: 220 },
-                aspectRatio: 1.333333 // 4:3
+                fps: 15,
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
             };
 
             try {
@@ -1333,11 +1357,27 @@
         }
 
         function onQrScanSuccess(decodedText, decodedResult) {
-            // Prevenir lecturas repetidas rápidas (debouncing)
+            const codigo = (decodedText || "").trim();
+            if (!codigo) return;
+
+            // Doble lectura idéntica: solo se acepta el código cuando la cámara
+            // lo lee 2 veces igual seguidas (máx. 2 segundos entre lecturas).
+            // Si la segunda lectura es distinta, se descarta y se sigue enfocando.
+            const ahora = Date.now();
+            if (appState.qrCandidate !== codigo || (ahora - appState.qrCandidateTime) > 2000) {
+                appState.qrCandidate = codigo;
+                appState.qrCandidateTime = ahora;
+                return;
+            }
+            appState.qrCandidate = null;
+
+            // Vibrar una vez al confirmar la lectura (los iPhone no lo soportan)
+            if (navigator.vibrate) navigator.vibrate(200);
+
             stopScanner();
-            
+
             // Buscar al niño por ID
-            const child = appState.children.find(c => c.id.toLowerCase() === decodedText.trim().toLowerCase());
+            const child = appState.children.find(c => c.id.toLowerCase() === codigo.toLowerCase());
             if (child) {
                 openConfirmModal(child);
             } else {
@@ -1596,7 +1636,14 @@
                 syncPayload.action = "addNote";
                 syncPayload.note = noteText;
             } else {
+                // Bloqueo local: un niño solo puede tener UNA asistencia por día.
+                if (getAttendedToday().includes(child.id)) {
+                    closeConfirmModal();
+                    showToast("Este niño YA tiene asistencia registrada hoy", true);
+                    return;
+                }
                 syncPayload.action = "addAttendance";
+                markAttendedToday(child.id);
             }
 
             // Guardar localmente en el buffer temporal
@@ -1616,44 +1663,56 @@
 
         // ---- SINCRONIZAR PENDIENTES ----
         async function syncPendingData() {
+            // Candado: si ya hay una sincronización en curso, no iniciar otra.
+            // (Dos envíos simultáneos del mismo registro creaban filas dobles.)
+            if (appState.isSyncing) return;
             if (appState.pendingSync.length === 0 || !appState.isOnline || !appState.scriptUrl) return;
 
-            const toSync = [...appState.pendingSync];
+            appState.isSyncing = true;
             let successCount = 0;
 
-            for (let item of toSync) {
-                try {
-                    // Usamos Content-Type "text/plain" para evitar el preflight CORS
-                    // (Apps Script no responde a OPTIONS). Así SÍ podemos leer la
-                    // respuesta y confirmar que el dato se guardó realmente.
-                    const response = await fetch(appState.scriptUrl, {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify(item)
-                    });
-
-                    const result = await response.json();
-
-                    if (result.status === "ok") {
-                        // Confirmado por el servidor: lo quitamos de la cola.
-                        successCount++;
-                    } else {
-                        // El servidor respondió pero rechazó el registro
-                        // (ej. operador no autorizado). No lo perdemos: queda pendiente.
-                        console.error("El servidor rechazó el registro:", result.message);
+            try {
+                while (appState.pendingSync.length > 0) {
+                    const item = appState.pendingSync[0];
+                    let result;
+                    try {
+                        // Content-Type "text/plain" evita el preflight CORS y permite
+                        // leer la respuesta para confirmar que el dato se guardó.
+                        const response = await fetch(appState.scriptUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "text/plain;charset=utf-8" },
+                            body: JSON.stringify(item)
+                        });
+                        result = await response.json();
+                    } catch (e) {
+                        // Error de red: conservar el pendiente y reintentar después.
+                        console.error("Error al subir registro", e);
                         break;
                     }
-                } catch (e) {
-                    // Error de red o respuesta ilegible: conservamos el pendiente.
-                    console.error("Error al subir registro", e);
-                    break;
+
+                    if (result.status === "ok") {
+                        // Guardado (o duplicado ignorado por el servidor): sale de la cola.
+                        appState.pendingSync.shift();
+                        successCount++;
+                    } else {
+                        // Rechazado por el servidor (ej. operador no autorizado).
+                        // Tras 5 rechazos se descarta para no bloquear la cola.
+                        item.rechazos = (item.rechazos || 0) + 1;
+                        console.error("El servidor rechazó el registro:", result.message);
+                        if (item.rechazos >= 5) {
+                            appState.pendingSync.shift();
+                            showToast("Un registro fue descartado tras 5 rechazos del servidor", true);
+                        }
+                        break;
+                    }
                 }
+            } finally {
+                localStorage.setItem("pending_sync", JSON.stringify(appState.pendingSync));
+                updatePendingBadge();
+                appState.isSyncing = false;
             }
 
             if (successCount > 0) {
-                appState.pendingSync.splice(0, successCount);
-                localStorage.setItem("pending_sync", JSON.stringify(appState.pendingSync));
-                updatePendingBadge();
                 showToast(`Sincronizados ${successCount} registros a Sheets`, false);
             }
         }
@@ -1735,6 +1794,30 @@
                 const v = c === 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             });
+        }
+
+        // ---- REGISTRO LOCAL DE ASISTENCIAS DEL DÍA (anti-duplicados) ----
+        function todayAttendanceKey() {
+            return "attended_" + formatDate(new Date()) + "_" + appState.selectedComedor;
+        }
+
+        function getAttendedToday() {
+            try { return JSON.parse(localStorage.getItem(todayAttendanceKey())) || []; }
+            catch (e) { return []; }
+        }
+
+        function markAttendedToday(childId) {
+            const lista = getAttendedToday();
+            if (!lista.includes(childId)) {
+                lista.push(childId);
+                localStorage.setItem(todayAttendanceKey(), JSON.stringify(lista));
+            }
+            // Borrar los registros de días anteriores para no acumular basura
+            const hoy = todayAttendanceKey();
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith("attended_") && k !== hoy) localStorage.removeItem(k);
+            }
         }
 
         // Escapa texto para insertarlo de forma segura en HTML (evita inyección/roturas).
