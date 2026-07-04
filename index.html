@@ -1130,7 +1130,13 @@
                         document.getElementById("settings-cedula").value = cedula;
                         document.getElementById("settings-url").value = url;
                         document.getElementById("settings-comedor").value = comedor;
-                        switchTab("attendance");
+                        // Si ya estamos en la pestaña de asistencia (primer login),
+                        // switchTab no haría nada: encender la cámara directamente.
+                        if (appState.currentTab === "attendance" || appState.currentTab === "notes") {
+                            startScanner();
+                        } else {
+                            switchTab("attendance");
+                        }
                     }, 1000);
                 } else {
                     showMsg(errDiv, "Operador no autorizado en el sistema.");
