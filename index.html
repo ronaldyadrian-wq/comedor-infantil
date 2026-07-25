@@ -20,8 +20,12 @@
     <!-- FontAwesome para Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Librería HTML5 QR Code para Escaneo -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Librería HTML5 QR Code para Escaneo.
+         Se sirve desde el propio repositorio (versión 2.3.8, congelada).
+         Antes se pedía a "unpkg.com/html5-qrcode" sin número de versión: el día
+         que publicaran una versión incompatible, el escáner habría dejado de
+         funcionar solo, en pleno comedor y sin que nadie tocara nada. -->
+    <script src="vendor-html5-qrcode.min.js" type="text/javascript"></script>
 
     <style>
         :root {
@@ -871,6 +875,21 @@
             <div id="settings-error" class="message-error" style="display:none; text-align: center;"></div>
         </div>
 
+        <!-- Registros que el servidor rechazó. Oculta si no hay ninguno. -->
+        <div class="settings-card" id="failed-card" style="display:none; border-color: rgba(239,68,68,.4);">
+            <h3 style="color:#F87171;"><i class="fa-solid fa-triangle-exclamation"></i> Registros sin subir</h3>
+            <p>Estos registros no se pudieron guardar en Google Sheets. <b>No se han perdido.</b>
+               Suele deberse a que el nombre o la cédula del operador no coinciden con la lista
+               autorizada: corrígelos arriba y pulsa Reintentar.</p>
+            <div id="failed-list"></div>
+            <button class="btn btn-primary" style="background-color: var(--emerald); margin-bottom:8px;" onclick="reintentarFallidos()">
+                <i class="fa-solid fa-rotate-right"></i> REINTENTAR AHORA
+            </button>
+            <button class="btn btn-outline" style="color:#F87171; border-color:rgba(239,68,68,.4);" onclick="descartarFallidos()">
+                DESCARTAR DEFINITIVAMENTE
+            </button>
+        </div>
+
         <div class="settings-card">
             <h3><i class="fa-solid fa-database"></i> Base de Datos Local</h3>
             <p>Niños descargados desde Google Sheets para buscar sin internet:</p>
@@ -996,7 +1015,9 @@
             currentTab: "attendance", // "attendance", "notes", "settings"
             children: [],
             pendingSync: [],
+            failedSync: [], // Registros que el servidor rechazó: NUNCA se borran solos
             isOnline: true,
+            serverReachable: true, // ¿El último envío llegó de verdad al servidor?
             scannerActive: false,
             scanner: null,
             scannerOp: null, // Cadena de promesas para serializar arranque/parada de cámara
@@ -1063,6 +1084,11 @@
             appState.pendingSync = JSON.parse(localStorage.getItem("pending_sync")) || [];
             updatePendingBadge();
 
+            // Cargar registros que el servidor rechazó (se conservan hasta resolverlos)
+            try { appState.failedSync = JSON.parse(localStorage.getItem("failed_sync")) || []; }
+            catch (e) { appState.failedSync = []; }
+            actualizarPanelFallidos();
+
             // Sincronizar UI de comedor en cabecera
             document.getElementById("header-comedor-sub").innerText = `Comedor: ${appState.selectedComedor}`;
 
@@ -1079,14 +1105,26 @@
         }
 
         // ---- MONITOREO DE RED ----
+        // navigator.onLine solo dice si hay wifi/datos conectados, NO si de verdad
+        // se llega a internet. El wifi de un comedor puede estar conectado y no
+        // tener salida: antes el indicador decía "Online" y el voluntario creía
+        // que todo se estaba guardando. Ahora, si el último envío al servidor
+        // falló, se avisa con "Sin servidor" en ámbar.
         function checkOnlineStatus() {
             appState.isOnline = navigator.onLine;
             const badge = document.getElementById("online-badge");
-            if (appState.isOnline) {
+            if (appState.isOnline && !appState.serverReachable) {
                 badge.className = "badge-online";
+                badge.style.backgroundColor = "var(--amber)";
+                badge.querySelector("span").innerText = "Sin servidor";
+                badge.querySelector("i").className = "fa-solid fa-triangle-exclamation";
+            } else if (appState.isOnline) {
+                badge.className = "badge-online";
+                badge.style.backgroundColor = "";
                 badge.querySelector("span").innerText = "Online";
                 badge.querySelector("i").className = "fa-solid fa-cloud";
             } else {
+                badge.style.backgroundColor = "";
                 badge.className = "badge-online badge-offline";
                 badge.querySelector("span").innerText = "Offline";
                 badge.querySelector("i").className = "fa-solid fa-cloud-showers-heavy";
@@ -1343,6 +1381,9 @@
                 console.error("No se pudo iniciar la cámara", err);
                 appState.scannerActive = false;
                 appState.scanner = null;
+                showToast("No se pudo abrir la cámara. Usa el botón de búsqueda 🔍", true);
+                reportarError("web", "abrirCamara", "No se pudo iniciar la cámara",
+                              (err && err.message ? err.message : String(err)) + " | " + navigator.userAgent);
             }
         }
 
@@ -1684,9 +1725,14 @@
                             body: JSON.stringify(item)
                         });
                         result = await response.json();
+                        appState.serverReachable = true;
                     } catch (e) {
                         // Error de red: conservar el pendiente y reintentar después.
+                        // Marcamos el servidor como inalcanzable para que el
+                        // indicador de arriba deje de decir "Online" falsamente.
                         console.error("Error al subir registro", e);
+                        appState.serverReachable = false;
+                        checkOnlineStatus();
                         break;
                     }
 
@@ -1696,12 +1742,24 @@
                         successCount++;
                     } else {
                         // Rechazado por el servidor (ej. operador no autorizado).
-                        // Tras 5 rechazos se descarta para no bloquear la cola.
                         item.rechazos = (item.rechazos || 0) + 1;
+                        item.ultimoError = result.message || "Rechazado por el servidor";
                         console.error("El servidor rechazó el registro:", result.message);
+
                         if (item.rechazos >= 5) {
+                            // ANTES: se borraba y el registro desaparecía para siempre,
+                            // dejando además al niño marcado como "ya asistió hoy" —
+                            // así que tampoco se podía volver a marcar. Ahora se aparta
+                            // a la lista de fallidos (visible en Ajustes) y se libera
+                            // al niño para poder registrarlo de nuevo.
                             appState.pendingSync.shift();
-                            showToast("Un registro fue descartado tras 5 rechazos del servidor", true);
+                            appState.failedSync.push(item);
+                            guardarFallidos();
+                            if (item.action === "addAttendance") unmarkAttendedToday(item.childId);
+                            reportarError("web", item.action,
+                                "Registro apartado tras 5 rechazos: " + item.ultimoError,
+                                "niño=" + item.childName + " (" + item.childId + ") fecha=" + item.date);
+                            showToast("Un registro no se pudo subir. Revisa Ajustes.", true);
                         }
                         break;
                     }
@@ -1746,9 +1804,13 @@
                     showToast("¡Catálogo local actualizado!", false);
                 } else {
                     showToast("Error de servidor", true);
+                    reportarError("web", "getChildren", "El servidor rechazó el catálogo",
+                                  result.message || "(sin mensaje)");
                 }
             } catch (e) {
                 showToast("Error de conexión al catálogo", true);
+                reportarError("web", "getChildren", "Error de conexión al descargar el catálogo",
+                              (e && e.message ? e.message : String(e)));
             }
         }
 
@@ -1806,6 +1868,88 @@
             catch (e) { return []; }
         }
 
+        // ---- REGISTROS FALLIDOS (no se pierden nunca) ----
+        function guardarFallidos() {
+            localStorage.setItem("failed_sync", JSON.stringify(appState.failedSync));
+            actualizarPanelFallidos();
+        }
+
+        function actualizarPanelFallidos() {
+            const card = document.getElementById("failed-card");
+            const lista = document.getElementById("failed-list");
+            if (!card || !lista) return;
+
+            if (appState.failedSync.length === 0) {
+                card.style.display = "none";
+                return;
+            }
+            card.style.display = "block";
+            lista.innerHTML = "";
+            appState.failedSync.forEach(item => {
+                const fila = document.createElement("div");
+                fila.style.cssText = "background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);"
+                    + "border-radius:10px;padding:10px;margin-bottom:8px;font-size:12px;";
+                fila.innerHTML = `
+                    <div style="font-weight:700;color:#F87171;">${escapeHtml(item.childName)}</div>
+                    <div style="color:var(--text-muted);margin-top:2px;">
+                        ${escapeHtml(item.action === "addNote" ? "Anotación" : "Asistencia")}
+                        · ${escapeHtml(item.date)} ${escapeHtml(item.time)}
+                        · ${escapeHtml(item.comedor)}
+                    </div>
+                    <div style="color:#FCA5A5;margin-top:4px;">Motivo: ${escapeHtml(item.ultimoError || "desconocido")}</div>
+                `;
+                lista.appendChild(fila);
+            });
+        }
+
+        // Devuelve los fallidos a la cola para volver a intentarlo (p. ej. después
+        // de corregir el nombre o la cédula del operador en Ajustes).
+        function reintentarFallidos() {
+            if (appState.failedSync.length === 0) return;
+            const cuantos = appState.failedSync.length;
+            appState.failedSync.forEach(item => {
+                item.rechazos = 0;
+                delete item.ultimoError;
+                appState.pendingSync.push(item);
+            });
+            appState.failedSync = [];
+            guardarFallidos();
+            localStorage.setItem("pending_sync", JSON.stringify(appState.pendingSync));
+            updatePendingBadge();
+            showToast(`Reintentando ${cuantos} registro(s)...`, false);
+            syncPendingData();
+        }
+
+        function descartarFallidos() {
+            if (appState.failedSync.length === 0) return;
+            if (!confirm(`¿Descartar definitivamente ${appState.failedSync.length} registro(s)?\n\nEsta acción no se puede deshacer.`)) return;
+            appState.failedSync = [];
+            guardarFallidos();
+            showToast("Registros descartados", false);
+        }
+
+        // ---- REPORTE DE ERRORES A LA BITÁCORA DEL SERVIDOR ----
+        // Escribe en la hoja "Errores" del Google Sheet. Nunca interrumpe la app:
+        // si el envío falla, se ignora en silencio.
+        function reportarError(origen, accion, mensaje, detalle) {
+            try {
+                if (!appState.scriptUrl || !appState.isOnline) return;
+                fetch(appState.scriptUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "logError",
+                        origen: origen || "web",
+                        accion: accion || "",
+                        mensaje: (mensaje || "").toString().substring(0, 400),
+                        detalle: (detalle || "").toString().substring(0, 800),
+                        operatorName: appState.operatorName,
+                        comedor: appState.selectedComedor
+                    })
+                }).catch(() => {});
+            } catch (e) { /* el reporte de errores jamás debe romper la app */ }
+        }
+
         function markAttendedToday(childId) {
             const lista = getAttendedToday();
             if (!lista.includes(childId)) {
@@ -1818,6 +1962,14 @@
                 const k = localStorage.key(i);
                 if (k && k.startsWith("attended_") && k !== hoy) localStorage.removeItem(k);
             }
+        }
+
+        // Libera a un niño del bloqueo "ya asistió hoy". Se usa cuando su registro
+        // no llegó a guardarse en el servidor: sin esto, el niño quedaba bloqueado
+        // el resto del día y su asistencia se perdía sin remedio.
+        function unmarkAttendedToday(childId) {
+            const lista = getAttendedToday().filter(id => id !== childId);
+            localStorage.setItem(todayAttendanceKey(), JSON.stringify(lista));
         }
 
         // Escapa texto para insertarlo de forma segura en HTML (evita inyección/roturas).

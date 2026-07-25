@@ -6,13 +6,37 @@
  *  - Nunca intercepta POST ni llamadas al backend de Google Apps Script.
  */
 
-const CACHE_VERSION = 'comedor-v1';
-const APP_SHELL = ['./', 'index.html', 'manifest.json'];
+// ⚠️ SUBE ESTE NÚMERO cada vez que cambies index.html o sw.js.
+// Es lo que obliga a los teléfonos a descargar la versión nueva; si no, se
+// quedan con la copia guardada y no ven los cambios.
+const CACHE_VERSION = 'comedor-v2';
+
+// Todo lo imprescindible para que la app funcione sin internet.
+// La librería del escáner ahora es local, así que también se guarda aquí:
+// sin ella no hay lectura de QR.
+const APP_SHELL = [
+  './',
+  'index.html',
+  'manifest.json',
+  'vendor-html5-qrcode.min.js',
+  'logo-conectados.png',
+  'logo-manitas.png',
+  'logo-icono.png'
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL))
+      // Uno por uno en vez de addAll: con addAll, si UN solo archivo falla
+      // (un logo renombrado, por ejemplo) no se guarda NINGUNO y la app
+      // se queda sin funcionar sin internet. Así cada archivo va por su cuenta.
+      .then((cache) => Promise.all(
+        APP_SHELL.map((recurso) =>
+          cache.add(recurso).catch(() => {
+            console.warn('[SW] No se pudo guardar en caché:', recurso);
+          })
+        )
+      ))
       .then(() => self.skipWaiting())
       .catch(() => self.skipWaiting())
   );
