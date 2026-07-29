@@ -1794,7 +1794,14 @@
 
             try {
                 showToast("Sincronizando catálogo...", false);
-                const response = await fetch(`${appState.scriptUrl}?action=getChildren&comedor=${encodeURIComponent(appState.selectedComedor)}`);
+                // Se envían nombre y cédula del operador: la lista de niños contiene
+                // datos personales de menores y el servidor debe poder exigir que
+                // quien la pide sea un voluntario autorizado.
+                const url = `${appState.scriptUrl}?action=getChildren`
+                    + `&comedor=${encodeURIComponent(appState.selectedComedor)}`
+                    + `&name=${encodeURIComponent(appState.operatorName)}`
+                    + `&cedula=${encodeURIComponent(appState.operatorCedula)}`;
+                const response = await fetch(url);
                 const result = await response.json();
 
                 if (result.status === "ok") {
@@ -1803,7 +1810,10 @@
                     document.getElementById("children-count").innerText = `${result.data.length} niños`;
                     showToast("¡Catálogo local actualizado!", false);
                 } else {
-                    showToast("Error de servidor", true);
+                    const noAutorizado = (result.message || "").toLowerCase().includes("no autorizado");
+                    showToast(noAutorizado
+                        ? "Tu nombre o cédula no están autorizados. Revísalos en Ajustes."
+                        : "Error de servidor", true);
                     reportarError("web", "getChildren", "El servidor rechazó el catálogo",
                                   result.message || "(sin mensaje)");
                 }
