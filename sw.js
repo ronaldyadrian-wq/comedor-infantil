@@ -9,7 +9,7 @@
 // ⚠️ SUBE ESTE NÚMERO cada vez que cambies index.html o sw.js.
 // Es lo que obliga a los teléfonos a descargar la versión nueva; si no, se
 // quedan con la copia guardada y no ven los cambios.
-const CACHE_VERSION = 'comedor-v3';
+const CACHE_VERSION = 'comedor-v4';
 
 // Todo lo imprescindible para que la app funcione sin internet.
 // La librería del escáner ahora es local, así que también se guarda aquí:
