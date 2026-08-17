@@ -518,6 +518,88 @@
             margin-top: 2px;
         }
 
+        /* Botones de grupo (4-1, 4-2…) dentro del buscador. Solo salen
+           cuando los códigos de los niños llevan grupo, o sea en el PAAI:
+           en los comedores los códigos son N-01 y CN-01 y la fila no
+           aparece. */
+        .section-chips {
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .section-chips.visible { display: flex; }
+
+        .section-chips button {
+            flex: 1 1 auto;
+            min-width: 68px;
+            padding: 11px 10px;
+            border: 1.5px solid #E2E8F0;
+            border-radius: 12px;
+            background: #fff;
+            color: #334155;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        .section-chips button.activo {
+            background: var(--emerald);
+            border-color: var(--emerald);
+            color: #fff;
+        }
+
+        .elige-grupo {
+            text-align: center;
+            color: #64748B;
+            font-size: 13.5px;
+            padding: 26px 16px;
+            line-height: 1.5;
+        }
+
+        /* Ficha de voluntario en el buscador.
+
+           Ojo con los colores: esta tarjeta vive DENTRO del cuadro de
+           búsqueda, que es blanco y fija texto oscuro (.modal-content
+           tiene color: #0F172A). Como la tarjeta es oscura, todos los
+           textos de dentro necesitan su color explícito; si se dejan
+           heredar salen negros sobre fondo oscuro y no se lee nada. */
+        .vol-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            background: #1E293B;
+            border: 1px solid rgba(255,255,255,.10);
+            margin-bottom: 8px;
+            cursor: pointer;
+            color: #FFFFFF;
+        }
+        .vol-card:active { background: #273449; }
+        .vol-badge {
+            min-width: 52px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 7px;
+            border-radius: 8px;
+            background: rgba(139,92,246,.25);
+            color: #C4B5FD;
+        }
+        .vol-badge.tcu { background: rgba(16,185,129,.25); color: #6EE7B7; }
+        .vol-badge.pf  { background: rgba(245,158,11,.25); color: #FCD34D; }
+        .vol-info { flex: 1; min-width: 0; }
+        .vol-info h4 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
+        .vol-info p  { margin: 3px 0 0; font-size: 12px; color: #CBD5E1; }
+        .vol-hours   { text-align: right; font-size: 12px; color: #CBD5E1; }
+        .vol-hours b { display: block; font-size: 16px; color: #FFFFFF; }
+
         /* --- Dialog de Confirmación de Asistencia / Notas --- */
         .confirm-card {
             text-align: center;
@@ -721,6 +803,18 @@
             color: var(--amber-light);
         }
 
+        .nav-item.violet.active {
+            color: #c4b5fd;
+        }
+
+        /* Con cuatro pestañas, "Voluntariado" no cabe en el ancho de un
+           móvil pequeño: se achica la letra y se permite que el texto
+           ocupe todo su hueco sin empujar a las demás. */
+        nav .nav-item span {
+            font-size: 9.5px;
+            white-space: nowrap;
+        }
+
         /* Toast de confirmación rápido */
         #toast {
             display: none;
@@ -754,7 +848,7 @@
                 <img src="logo-conectados.png" alt="Conectados" class="setup-logo-img">
                 <img src="logo-manitas.png" alt="Manitas a la mesa" class="setup-logo-img">
             </div>
-            <h2>Comedor Infantil</h2>
+            <h2>Manitas a la Mesa</h2>
             <p>Ingresa tu nombre y cédula para validarte como operador autorizado en Google Sheets.</p>
             
             <div class="input-group">
@@ -769,12 +863,16 @@
                 <input type="text" inputmode="numeric" id="setup-cedula" placeholder="Ej. 12345678">
             </div>
 
+            <!-- Los dos comedores y la sede del PAAI salen en el mismo
+                 selector: es la misma app, cambia la lista de niños y la
+                 forma de contar en los reportes. -->
             <div class="input-group">
-                <label>Comedor de Trabajo</label>
+                <label>Comedor o sede</label>
                 <i class="fa-solid fa-home"></i>
                 <select id="setup-comedor">
-                    <option value="Granadilla">Granadilla</option>
-                    <option value="Tres Ríos">Tres Ríos</option>
+                    <option value="Granadilla">Granadilla (comedor)</option>
+                    <option value="Tres Ríos">Tres Ríos (comedor)</option>
+                    <option value="Cipreses">Cipreses (PAAI)</option>
                 </select>
             </div>
             
@@ -848,7 +946,27 @@
         </button>
     </div>
 
-    <!-- PANTALLA 3: AJUSTES -->
+    <!-- PANTALLA 3: VOLUNTARIADO -->
+    <div id="screen-volunteers" class="screen">
+        <div class="settings-card" style="margin-top: 12px;">
+            <h3><i class="fa-solid fa-hand-holding-heart"></i> Registrar jornada</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 8px 0 0;">
+                Pulsa la lupa, busca al voluntario por nombre o cédula, y
+                confirma. Cada registro suma <b id="vol-hours-label">2.5</b> horas.
+            </p>
+        </div>
+
+        <div id="vol-today" class="settings-card" style="margin-top: 12px;">
+            <h3><i class="fa-solid fa-clock"></i> Jornadas de hoy</h3>
+            <div id="vol-today-list" style="margin-top: 10px;"></div>
+        </div>
+
+        <button class="fab-search" style="background-color:#7c3aed;" onclick="openVolunteerSearch()">
+            <i class="fa-solid fa-search"></i>
+        </button>
+    </div>
+
+    <!-- PANTALLA 4: AJUSTES -->
     <div id="screen-settings" class="screen">
         <div class="settings-card">
             <h3><i class="fa-solid fa-user-gear"></i> Datos del Operador</h3>
@@ -861,10 +979,11 @@
                 <input type="text" inputmode="numeric" id="settings-cedula" class="input-dark">
             </div>
             <div class="input-group" style="position: relative;">
-                <label>Comedor Activo</label>
+                <label>Comedor o sede activa</label>
                 <select id="settings-comedor" class="select-dark">
-                    <option value="Granadilla">Granadilla</option>
-                    <option value="Tres Ríos">Tres Ríos</option>
+                    <option value="Granadilla">Granadilla (comedor)</option>
+                    <option value="Tres Ríos">Tres Ríos (comedor)</option>
+                    <option value="Cipreses">Cipreses (PAAI)</option>
                 </select>
             </div>
             <div class="input-group">
@@ -926,11 +1045,72 @@
             </div>
             <div class="search-input-container">
                 <i class="fa-solid fa-search"></i>
-                <input type="text" id="search-query" oninput="performFuzzySearch()" placeholder="Escribe el nombre o apellido...">
+                <input type="text" id="search-query" oninput="onSearchInput()" placeholder="Escribe el nombre o apellido...">
+            </div>
+            <div id="search-sections" class="section-chips">
+                <!-- Se rellena con JS: un botón por grupo (solo en el PAAI) -->
             </div>
             <div id="search-results" class="results-list">
                 <!-- Se rellena con JS -->
             </div>
+        </div>
+    </div>
+
+    <!-- CONFIRMAR JORNADA DE VOLUNTARIADO -->
+    <div id="vol-modal" class="modal">
+        <div class="modal-content confirm-card">
+            <div class="modal-header" style="justify-content: flex-end; margin-bottom: 0;">
+                <button class="modal-close" onclick="closeVolunteerConfirm()">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="confirm-avatar" id="vol-confirm-avatar">
+                <i class="fa-solid fa-hand-holding-heart"></i>
+            </div>
+
+            <h3 class="confirm-name" id="vol-confirm-name">—</h3>
+            <p class="confirm-id" id="vol-confirm-sub">—</p>
+
+            <div class="divider"></div>
+
+            <!-- Las horas se escriben: una jornada no siempre dura lo
+                 mismo. Viene con la duración habitual ya puesta, para que
+                 el caso normal sea un solo toque. -->
+            <div style="margin: 10px 0 2px;">
+                <label style="display:block;font-size:11.5px;font-weight:700;
+                              color:#64748b;text-transform:uppercase;
+                              letter-spacing:.04em;margin-bottom:8px;">Horas trabajadas</label>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button type="button" onclick="ajustarHoras(-0.5)"
+                            style="width:52px;height:56px;flex:0 0 52px;border-radius:12px;
+                                   border:1px solid #E2E8F0;background:#F8FAFC;color:#475569;
+                                   font-size:24px;cursor:pointer;">−</button>
+                    <input type="number" id="vol-confirm-hours" value="2.5"
+                           inputmode="decimal" step="0.5" min="0.5" max="24"
+                           style="flex:1;width:100%;text-align:center;font-size:28px;
+                                  font-weight:800;color:#7c3aed;padding:12px 4px;
+                                  border:1px solid #E2E8F0;border-radius:12px;
+                                  background:#fff;font-family:inherit;">
+                    <button type="button" onclick="ajustarHoras(0.5)"
+                            style="width:52px;height:56px;flex:0 0 52px;border-radius:12px;
+                                   border:1px solid #E2E8F0;background:#F8FAFC;color:#475569;
+                                   font-size:24px;cursor:pointer;">+</button>
+                </div>
+                <div id="vol-confirm-total"
+                     style="font-size:13px;color:#64748b;margin-top:10px;text-align:center;"></div>
+            </div>
+
+            <div id="vol-confirm-warning"
+                 style="display:none;background:#fef3c7;border:1px solid #fcd34d;
+                        color:#92400e;border-radius:10px;padding:10px 12px;
+                        font-size:12.5px;margin-top:12px;text-align:left;"></div>
+
+            <button id="vol-confirm-btn" class="btn btn-primary"
+                    style="margin-top:16px;background:#7c3aed;"
+                    onclick="confirmVolunteerHours()">REGISTRAR</button>
+            <button class="btn" style="margin-top:8px;background:#e2e8f0;color:#475569;"
+                    onclick="closeVolunteerConfirm()">CANCELAR</button>
         </div>
     </div>
 
@@ -997,6 +1177,10 @@
             <i class="fa-solid fa-pen-to-square"></i>
             <span>Anotación</span>
         </div>
+        <div class="nav-item violet" id="nav-volunteers" onclick="switchTab('volunteers')">
+            <i class="fa-solid fa-hand-holding-heart"></i>
+            <span>Voluntariado</span>
+        </div>
         <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
             <i class="fa-solid fa-gears"></i>
             <span>Ajustes</span>
@@ -1005,6 +1189,45 @@
 
     <!-- LÓGICA DE JAVASCRIPT -->
     <script>
+        // ============================================================
+        //  QUÉ PROYECTO ES CADA SEDE
+        // ============================================================
+        //
+        // Manitas a la Mesa y el PAAI son la misma aplicación: escanear el
+        // QR de un niño y registrar que llegó. Cambian la lista de niños,
+        // la sede y poco más. Por eso hay UNA sola app y no dos copias que
+        // acabarían desincronizándose.
+        //
+        // El proyecto se deduce de la sede elegida, no de una opción
+        // aparte: así es imposible estar en Cipreses "haciendo Manitas".
+        const PROYECTOS_APP = {
+            MM: {
+                nombre: "Manitas a la Mesa",
+                titulo: "Control de Asistencia",
+                etiquetaSede: "Comedor",
+                logo: "logo-manitas.png"
+            },
+            PAAI: {
+                nombre: "PAAI",
+                titulo: "Registro de llegadas",
+                etiquetaSede: "Sede",
+                // El PAAI no tiene logo propio: lleva el de la asociación.
+                logo: "logo-conectados.png"
+            }
+        };
+
+        // Las sedes del PAAI. Si mañana se abre otra, se añade aquí y en el
+        // selector de arriba (y en SEDES_PAAI del Apps Script).
+        const SEDES_PAAI = ["Cipreses"];
+
+        function proyectoDeSede(sede) {
+            return SEDES_PAAI.indexOf((sede || "").toString().trim()) !== -1 ? "PAAI" : "MM";
+        }
+
+        function proyectoActual() {
+            return PROYECTOS_APP[proyectoDeSede(appState.selectedComedor)];
+        }
+
         // ---- ESTADO DE LA APP ----
         let appState = {
             operatorName: "",
@@ -1012,8 +1235,12 @@
             scriptUrl: "",
             selectedComedor: "Granadilla",
             isSetupDone: false,
-            currentTab: "attendance", // "attendance", "notes", "settings"
+            currentTab: "attendance", // "attendance", "notes", "volunteers", "settings"
             children: [],
+            volunteers: [],          // lista de voluntarios con sus horas
+            volunteerHours: 2.5,     // lo que suma un registro (lo dice el servidor)
+            activeVolunteer: null,   // voluntario elegido en el buscador
+            searchSection: "",       // grupo elegido en el buscador ("4-1"…), "" = todavía ninguno
             pendingSync: [],
             failedSync: [], // Registros que el servidor rechazó: NUNCA se borran solos
             isOnline: true,
@@ -1025,7 +1252,7 @@
             qrCandidate: null, // Doble lectura: código leído a la espera de confirmarse
             qrCandidateTime: 0,
             activeChild: null, // Niño escaneado/seleccionado actualmente
-            searchMode: "attendance" // "attendance" o "notes"
+            searchMode: "attendance" // "attendance", "notes" o "volunteers"
         };
 
         // ---- INICIALIZACIÓN ----
@@ -1060,7 +1287,8 @@
                     stopScanner();
                 } else {
                     const modalAbierto = document.getElementById("search-modal").classList.contains("active") ||
-                                         document.getElementById("confirm-modal").classList.contains("active");
+                                         document.getElementById("confirm-modal").classList.contains("active") ||
+                                         document.getElementById("vol-modal").classList.contains("active");
                     if (!modalAbierto && (appState.currentTab === "attendance" || appState.currentTab === "notes")) {
                         startScanner();
                     }
@@ -1080,6 +1308,11 @@
             appState.children = JSON.parse(localStorage.getItem("children_catalog")) || [];
             document.getElementById("children-count").innerText = `${appState.children.length} niños`;
 
+            // Y la última lista de voluntarios descargada, para poder
+            // registrar jornadas también cuando no hay internet.
+            try { appState.volunteers = JSON.parse(localStorage.getItem("volunteers_catalog")) || []; }
+            catch (e) { appState.volunteers = []; }
+
             // Cargar pendientes
             appState.pendingSync = JSON.parse(localStorage.getItem("pending_sync")) || [];
             updatePendingBadge();
@@ -1089,8 +1322,9 @@
             catch (e) { appState.failedSync = []; }
             actualizarPanelFallidos();
 
-            // Sincronizar UI de comedor en cabecera
-            document.getElementById("header-comedor-sub").innerText = `Comedor: ${appState.selectedComedor}`;
+            // Sincronizar la cabecera con la sede: en el comedor pone
+            // "Comedor: Granadilla"; en el PAAI, "Sede: Cipreses".
+            aplicarProyectoEnPantalla();
 
             if (appState.isSetupDone) {
                 document.getElementById("setup-screen").style.display = "none";
@@ -1101,6 +1335,30 @@
                 startScanner();
             } else {
                 document.getElementById("setup-screen").style.display = "flex";
+            }
+        }
+
+        // Pone la cabecera (título, sede y logo) acorde al proyecto de la
+        // sede activa. Se llama al cargar y cada vez que se cambia de sede:
+        // sin esto, alguien que pasa de Granadilla a Cipreses seguiría
+        // viendo "Comedor: Granadilla" mientras registra niños del PAAI.
+        function aplicarProyectoEnPantalla() {
+            const p = proyectoActual();
+
+            document.getElementById("header-comedor-sub").innerText =
+                `${p.etiquetaSede}: ${appState.selectedComedor}`;
+
+            // El título de la cabecera solo lo manda el proyecto cuando
+            // estamos en la pantalla de pasar lista; en Anotaciones,
+            // Voluntariado o Ajustes manda la pestaña.
+            if (appState.currentTab === "attendance") {
+                document.getElementById("header-title-text").innerText = p.titulo;
+            }
+
+            const logo = document.querySelector(".header-logo-chip img");
+            if (logo) {
+                logo.src = p.logo;
+                logo.alt = p.nombre;
             }
         }
 
@@ -1174,7 +1432,7 @@
                     appState.selectedComedor = comedor;
                     appState.isSetupDone = true;
 
-                    document.getElementById("header-comedor-sub").innerText = `Comedor: ${comedor}`;
+                    aplicarProyectoEnPantalla();
 
                     // Bajar catálogo de niños de inmediato
                     await syncChildrenCatalog();
@@ -1248,12 +1506,16 @@
                     appState.scriptUrl = url;
                     appState.selectedComedor = comedor;
 
-                    document.getElementById("header-comedor-sub").innerText = `Comedor: ${comedor}`;
-                    
+                    aplicarProyectoEnPantalla();
+
                     showToast("Ajustes guardados con éxito", false);
 
-                    // Si cambió el comedor, forzar descarga del nuevo catálogo
+                    // Si cambió la sede, forzar descarga del nuevo catálogo.
+                    // También se limpia el grupo elegido en el buscador: los
+                    // grupos de Cipreses no existen en Granadilla, y un
+                    // filtro heredado deja la lista vacía sin explicar por qué.
                     if (hasComedorChanged) {
+                        appState.searchSection = "";
                         await syncChildrenCatalog();
                     }
                 } else {
@@ -1308,31 +1570,42 @@
         }
 
         // ---- NAVEGACIÓN ENTRE PESTAÑAS ----
-        function switchTab(tabName) {
-            if (appState.currentTab === tabName) return;
-            
-            // Desactivar clase activa en navegación
-            document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
-            // Activar pestaña elegida
-            document.getElementById(`nav-${tabName === 'attendance' ? 'attendance' : tabName === 'notes' ? 'notes' : 'settings'}`).classList.add("active");
+        // Las cuatro pestañas se nombran igual que sus elementos:
+        // nav-<pestaña> y screen-<pestaña>. Antes esto se resolvía con
+        // encadenados de "?:" que había que ampliar en dos sitios cada vez
+        // que aparecía una pestaña nueva.
+        const PESTANAS = ["attendance", "notes", "volunteers", "settings"];
 
-            // Desactivar pantallas
+        function switchTab(tabName) {
+            if (PESTANAS.indexOf(tabName) === -1) tabName = "attendance";
+            if (appState.currentTab === tabName) return;
+
+            document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+            document.getElementById(`nav-${tabName}`).classList.add("active");
+
             document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
-            // Activar pantalla elegida
-            document.getElementById(`screen-${tabName === 'notes' ? 'notes' : tabName === 'settings' ? 'settings' : 'attendance'}`).classList.add("active");
+            document.getElementById(`screen-${tabName}`).classList.add("active");
 
             // Cambiar titulo en cabecera
             const title = document.getElementById("header-title-text");
-            if (tabName === "attendance") title.innerText = "Control de Asistencia";
+            if (tabName === "attendance") title.innerText = proyectoActual().titulo;
             else if (tabName === "notes") title.innerText = "Anotaciones";
+            else if (tabName === "volunteers") title.innerText = "Voluntariado";
             else title.innerText = "Ajustes";
 
             appState.currentTab = tabName;
-            
+
             // Manejar cámara
             stopScanner();
             if (tabName === "attendance" || tabName === "notes") {
                 startScanner();
+            }
+
+            // Al entrar en Voluntariado, traer la lista y las horas de hoy:
+            // si alguien registró desde otro teléfono, aquí ya se ve.
+            if (tabName === "volunteers") {
+                renderVolunteersToday();
+                refreshVolunteers(true);
             }
         }
 
@@ -1522,17 +1795,71 @@
             return false;
         }
 
+        // ---- GRUPOS DENTRO DE UNA SEDE (los de la escuela, en el PAAI) ----
+        //
+        // Salen del propio código del niño: "PAAI 4-1-07" es el 7 del grupo
+        // 4-1. Así, cuando la escuela mande el año que viene un 3-1, sus
+        // niños aparecen solos en el buscador sin tocar nada aquí.
+        function grupoDe(child) {
+            const m = /^PAAI\s+(\d+-\d+)-\d+$/i.exec(((child || {}).id || "").trim());
+            return m ? m[1] : "";
+        }
+
+        function gruposDisponibles() {
+            const vistos = new Set();
+            (appState.children || []).forEach(c => {
+                const g = grupoDe(c);
+                if (g) vistos.add(g);
+            });
+            return [...vistos].sort();
+        }
+
+        function pintarGrupos() {
+            const cont = document.getElementById("search-sections");
+            const grupos = gruposDisponibles();
+
+            // Con un grupo o ninguno no hay nada que elegir: en los
+            // comedores los códigos son N-01 y CN-01, sin grupo, y la fila
+            // no aparece.
+            if (grupos.length < 2) {
+                cont.classList.remove("visible");
+                cont.innerHTML = "";
+                return;
+            }
+
+            cont.classList.add("visible");
+            cont.innerHTML = "";
+            // "*" es "los quiero todos", que no es lo mismo que "" —todavía
+            // no ha elegido—. Sin distinguirlos, pulsar Todos devolvía al
+            // cartel de "elige un grupo" y el botón parecía roto.
+            [["*", "Todos"]].concat(grupos.map(g => [g, g])).forEach(([valor, texto]) => {
+                const b = document.createElement("button");
+                b.type = "button";
+                b.innerText = texto;
+                if (appState.searchSection === valor) b.className = "activo";
+                b.onclick = () => elegirGrupo(valor);
+                cont.appendChild(b);
+            });
+        }
+
+        function elegirGrupo(grupo) {
+            appState.searchSection = grupo;
+            pintarGrupos();
+            performFuzzySearch();
+        }
+
         // ---- MODAL DE BÚSQUEDA MANUAL ----
         function openSearchModal(mode) {
             appState.searchMode = mode;
             stopScanner();
-            
+
             document.getElementById("search-query").value = "";
+            document.getElementById("search-query").placeholder = "Escribe el nombre o apellido...";
             document.getElementById("search-results").innerHTML = "";
             document.getElementById("search-modal-title").innerText = mode === "attendance" ? "Buscar para Asistencia" : "Buscar para Anotación";
             document.getElementById("search-modal").classList.add("active");
-            
-            // Mostrar todos los niños por defecto
+
+            pintarGrupos();
             performFuzzySearch();
         }
 
@@ -1543,16 +1870,39 @@
             }
         }
 
+        // El mismo cuadro de búsqueda sirve para niños y para voluntarios;
+        // aquí se decide a cuál de los dos buscadores va lo que se escribe.
+        function onSearchInput() {
+            if (appState.searchMode === "volunteers") renderVolunteerResults();
+            else performFuzzySearch();
+        }
+
         function performFuzzySearch() {
             const query = document.getElementById("search-query").value.trim();
             const resultsContainer = document.getElementById("search-results");
             resultsContainer.innerHTML = "";
 
+            // En el PAAI los niños son cuatro grupos distintos de la escuela
+            // y volcarlos juntos son 87 nombres seguidos. Si hay grupos, la
+            // lista solo se enseña cuando se elige uno. Mientras no se elige
+            // ninguno, escribir un nombre busca en todos —que es el caso de
+            // quien no sabe en qué grupo está el niño—; una vez elegido un
+            // grupo, la búsqueda se queda dentro de él hasta pulsar "Todos".
+            const grupo = appState.searchSection || "";
+            let base = appState.children;
+            if (grupo && grupo !== "*") base = base.filter(c => grupoDe(c) === grupo);
+
             let filtered = [];
             if (!query) {
-                filtered = appState.children;
+                if (!grupo && gruposDisponibles().length > 1) {
+                    resultsContainer.innerHTML = `<div class="elige-grupo">
+                        Elige un grupo arriba para ver su lista,<br>
+                        o escribe un nombre para buscarlo en todos.</div>`;
+                    return;
+                }
+                filtered = base;
             } else {
-                filtered = appState.children.filter(c => isFlexibleMatch(c.name, query));
+                filtered = base.filter(c => isFlexibleMatch(c.name, query));
             }
 
             if (filtered.length === 0) {
@@ -1598,10 +1948,13 @@
                 avatarBox.innerHTML = `<i class="fa-solid fa-user"></i>`;
             }
 
-            // Viaja solo
+            // Viaja solo. En el PAAI esta columna viene vacía (allí los
+            // niños salen de la escuela con su grupo), así que se enseña un
+            // guion en vez de un "No" que nadie ha comprobado.
             const travelSpan = document.getElementById("confirm-travel");
-            travelSpan.innerText = child.travelsAlone;
-            travelSpan.className = child.travelsAlone.toLowerCase() === "sí" ? "pill-travel si" : "pill-travel no";
+            const viaja = (child.travelsAlone || "").toString().trim();
+            travelSpan.innerText = viaja || "—";
+            travelSpan.className = viaja.toLowerCase() === "sí" ? "pill-travel si" : "pill-travel no";
 
             // Alergias
             const allergiesBox = document.getElementById("confirm-allergies");
@@ -1756,9 +2109,12 @@
                             appState.failedSync.push(item);
                             guardarFallidos();
                             if (item.action === "addAttendance") unmarkAttendedToday(item.childId);
+                            const quien = item.action === "addVolunteerHours"
+                                ? "voluntario=" + item.volunteerName + " (" + item.volunteerCode + ") horas=" + item.hours
+                                : "niño=" + item.childName + " (" + item.childId + ")";
                             reportarError("web", item.action,
                                 "Registro apartado tras 5 rechazos: " + item.ultimoError,
-                                "niño=" + item.childName + " (" + item.childId + ") fecha=" + item.date);
+                                quien + " fecha=" + item.date);
                             showToast("Un registro no se pudo subir. Revisa Ajustes.", true);
                         }
                         break;
@@ -1899,10 +2255,15 @@
                 const fila = document.createElement("div");
                 fila.style.cssText = "background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);"
                     + "border-radius:10px;padding:10px;margin-bottom:8px;font-size:12px;";
+                const esJornada = item.action === "addVolunteerHours";
+                const titulo = esJornada ? item.volunteerName : item.childName;
+                const tipo = esJornada
+                    ? `Voluntariado (${item.hours} h)`
+                    : (item.action === "addNote" ? "Anotación" : "Asistencia");
                 fila.innerHTML = `
-                    <div style="font-weight:700;color:#F87171;">${escapeHtml(item.childName)}</div>
+                    <div style="font-weight:700;color:#F87171;">${escapeHtml(titulo)}</div>
                     <div style="color:var(--text-muted);margin-top:2px;">
-                        ${escapeHtml(item.action === "addNote" ? "Anotación" : "Asistencia")}
+                        ${escapeHtml(tipo)}
                         · ${escapeHtml(item.date)} ${escapeHtml(item.time)}
                         · ${escapeHtml(item.comedor)}
                     </div>
@@ -1936,6 +2297,287 @@
             appState.failedSync = [];
             guardarFallidos();
             showToast("Registros descartados", false);
+        }
+
+        // ============================================================
+        //  VOLUNTARIADO
+        // ============================================================
+        //
+        // La lista de voluntarios es una sola para los tres proyectos de la
+        // ONG: quien hace horas en el comedor y en el PAAI las suma en el
+        // mismo total. Por eso la hoja "Voluntarios" del Sheet no lleva
+        // sufijo de sede; la sede va escrita en cada registro de horas.
+
+        function quitarTildes(t) {
+            return (t || "").toString()
+                .normalize("NFD").replace(/[̀-ͯ]/g, "")
+                .trim().toLowerCase();
+        }
+
+        // Descarga la lista de voluntarios con sus horas acumuladas.
+        async function refreshVolunteers(silencioso) {
+            if (!appState.scriptUrl || !appState.isOnline) {
+                if (!silencioso) showToast("Sin internet: no se pudo actualizar la lista", true);
+                return;
+            }
+            try {
+                // La lista lleva cédulas y teléfonos, así que el servidor
+                // exige operador autorizado igual que para los niños.
+                const url = `${appState.scriptUrl}?action=getVolunteers`
+                    + `&name=${encodeURIComponent(appState.operatorName)}`
+                    + `&cedula=${encodeURIComponent(appState.operatorCedula)}`
+                    + `&date=${encodeURIComponent(formatDate(new Date()))}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (data.status !== "ok") {
+                    if (!silencioso) showToast(data.message || "No se pudo cargar la lista", true);
+                    return;
+                }
+
+                appState.volunteers = data.data || [];
+                localStorage.setItem("volunteers_catalog", JSON.stringify(appState.volunteers));
+                if (data.horasPorJornada) {
+                    appState.volunteerHours = data.horasPorJornada;
+                    const et = document.getElementById("vol-hours-label");
+                    if (et) et.innerText = data.horasPorJornada;
+                }
+                renderVolunteersToday();
+            } catch (e) {
+                if (!silencioso) showToast("Sin conexión con el servidor", true);
+                reportarError("web", "getVolunteers", "No se pudo cargar voluntarios", String(e));
+            }
+        }
+
+        // Resumen de quién ha registrado hoy, en la propia pestaña.
+        function renderVolunteersToday() {
+            const cont = document.getElementById("vol-today-list");
+            if (!cont) return;
+
+            const hoy = (appState.volunteers || []).filter(v => v.hoursToday > 0);
+            if (hoy.length === 0) {
+                cont.innerHTML = `<p style="font-size:13px;color:var(--text-muted);margin:0;">
+                    Todavía no hay jornadas registradas hoy.</p>`;
+                return;
+            }
+
+            cont.innerHTML = hoy.map(v => `
+                <div style="display:flex;justify-content:space-between;align-items:center;
+                            padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);">
+                    <span style="font-size:14px;">${escapeHtml(v.name)}</span>
+                    <span style="font-size:13px;color:var(--text-muted);">
+                        ${v.hoursToday} h hoy · ${v.totalHours} h en total</span>
+                </div>`).join("");
+        }
+
+        function openVolunteerSearch() {
+            appState.searchMode = "volunteers";
+            stopScanner();
+
+            document.getElementById("search-query").value = "";
+            document.getElementById("search-query").placeholder = "Nombre o cédula del voluntario...";
+            document.getElementById("search-modal-title").innerText = "Buscar voluntario";
+            // Los grupos son de los niños; aquí estorbarían.
+            document.getElementById("search-sections").classList.remove("visible");
+            document.getElementById("search-modal").classList.add("active");
+
+            // Refrescar en segundo plano: si alguien registró desde otro
+            // teléfono, las horas que se ven aquí ya estarán al día.
+            refreshVolunteers(true).then(renderVolunteerResults);
+            renderVolunteerResults();
+        }
+
+        function renderVolunteerResults() {
+            const cont = document.getElementById("search-results");
+            const q = document.getElementById("search-query").value.trim();
+            cont.innerHTML = "";
+
+            let lista = appState.volunteers || [];
+
+            if (lista.length === 0) {
+                cont.innerHTML = `<div style="text-align:center;color:#64748B;font-size:13px;padding:20px;">
+                    La lista de voluntarios está vacía.<br>
+                    Conéctate a internet y vuelve a entrar aquí para descargarla.</div>`;
+                return;
+            }
+
+            if (q) {
+                // Busca por nombre (tolerante a tildes, igual que los niños),
+                // por código, o por cédula comparando solo los dígitos: da
+                // igual que esté escrita con guiones o con espacios.
+                const soloDigitos = q.replace(/\D/g, "");
+                const qn = quitarTildes(q);
+
+                // A cada coincidencia se le pone una nota de lo buena que es.
+                // Sin esto, la búsqueda fonética mezcla parecidos remotos con
+                // el nombre exacto y los ordena por código: al escribir
+                // "Damaris" salía primero "Maria del Mar Matarrita", y con
+                // más de cien voluntarios en la lista eso es apuntarle las
+                // horas a otra persona sin enterarse.
+                const puntuar = (v) => {
+                    const n = quitarTildes(v.name);
+                    if (n.startsWith(qn)) return 0;                           // empieza igual
+                    if (n.split(/\s+/).some(p => p.startsWith(qn))) return 1;  // algún apellido
+                    if (n.includes(qn)) return 2;                             // lo contiene
+                    if (v.code.toLowerCase() === q.toLowerCase()) return 0;
+                    if (v.code.toLowerCase().includes(q.toLowerCase())) return 2;
+                    if (soloDigitos && (v.cedula || "").replace(/\D/g, "").includes(soloDigitos)) return 1;
+                    if (isFlexibleMatch(v.name, q)) return 3;                 // solo se parece
+                    return 99;                                                // no coincide
+                };
+
+                lista = lista
+                    .map(v => ({ v, p: puntuar(v) }))
+                    .filter(x => x.p < 99)
+                    .sort((a, b) => a.p - b.p || a.v.name.localeCompare(b.v.name))
+                    .map(x => x.v);
+            }
+
+            if (lista.length === 0) {
+                cont.innerHTML = `<div style="text-align:center;color:#64748B;
+                    font-size:13px;padding:20px;">No hay resultados.</div>`;
+                return;
+            }
+
+            lista.forEach(v => {
+                const clase = v.type === "TCU" ? "tcu" : (v.type === "Profesional" ? "pf" : "");
+                const card = document.createElement("div");
+                card.className = "vol-card";
+                card.onclick = () => { closeSearchModal(); openVolunteerConfirm(v); };
+                card.innerHTML = `
+                    <div class="vol-badge ${clase}">${escapeHtml(v.code)}</div>
+                    <div class="vol-info">
+                        <h4>${escapeHtml(v.name)}</h4>
+                        <p>${escapeHtml(v.type)}${v.cedula ? " · " + escapeHtml(v.cedula) : ""}</p>
+                    </div>
+                    <div class="vol-hours"><b>${v.totalHours}</b>horas</div>`;
+                cont.appendChild(card);
+            });
+        }
+
+        function openVolunteerConfirm(v) {
+            appState.activeVolunteer = v;
+            const horas = appState.volunteerHours || 2.5;
+
+            document.getElementById("vol-confirm-name").innerText = v.name;
+            document.getElementById("vol-confirm-sub").innerText =
+                `${v.code} · ${v.type}` + (v.cedula ? ` · Cédula ${v.cedula}` : "");
+            document.getElementById("vol-confirm-hours").value = horas;
+            document.getElementById("vol-confirm-total").innerText =
+                `Lleva ${v.totalHours} h acumuladas`;
+
+            // Aviso si ya registró hoy: es el error fácil de cometer,
+            // porque no hay nada en pantalla que lo recuerde. El total se
+            // recalcula al cambiar las horas, no se deja el de las 2.5.
+            actualizarAvisoHoras();
+            document.getElementById("vol-confirm-hours").oninput = actualizarAvisoHoras;
+
+            document.getElementById("vol-confirm-btn").disabled = false;
+            document.getElementById("vol-modal").classList.add("active");
+        }
+
+        function closeVolunteerConfirm() {
+            document.getElementById("vol-modal").classList.remove("active");
+            appState.activeVolunteer = null;
+        }
+
+        // Sube o baja las horas de media en media, para no tener que
+        // teclear en el móvil en el caso normal.
+        function ajustarHoras(cuanto) {
+            const campo = document.getElementById("vol-confirm-hours");
+            const v = Math.max(0.5, Math.min(24, (parseFloat(campo.value) || 0) + cuanto));
+            campo.value = Number(v.toFixed(1));
+            actualizarAvisoHoras();
+        }
+
+        // Avisa si esa persona ya tiene horas hoy, diciendo cuánto sumaría
+        // en total. Se recalcula al cambiar el número, para que la cifra
+        // que se ve sea siempre la de verdad.
+        function actualizarAvisoHoras() {
+            const v = appState.activeVolunteer;
+            const aviso = document.getElementById("vol-confirm-warning");
+            if (!v || !aviso) return;
+
+            const horas = parseFloat(document.getElementById("vol-confirm-hours").value) || 0;
+            if (v.hoursToday > 0) {
+                aviso.style.display = "block";
+                aviso.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i>
+                    Hoy ya tiene ${v.hoursToday} h registradas.
+                    Si continúas, sumará ${(v.hoursToday + horas).toFixed(1)} h en el día.`;
+            } else {
+                aviso.style.display = "none";
+            }
+        }
+
+        async function confirmVolunteerHours() {
+            const v = appState.activeVolunteer;
+            if (!v) return;
+
+            const horas = parseFloat(document.getElementById("vol-confirm-hours").value);
+            if (!horas || horas <= 0) {
+                showToast("Escribe cuántas horas trabajó", true);
+                return;
+            }
+            if (horas > 24) {
+                showToast("Nadie trabaja más de 24 h en un día", true);
+                return;
+            }
+
+            const boton = document.getElementById("vol-confirm-btn");
+            boton.disabled = true;                 // evita el doble toque
+            boton.innerText = "Registrando...";
+
+            const ahora = new Date();
+            const payload = {
+                action: "addVolunteerHours",
+                volunteerCode: v.code,
+                volunteerName: v.name,   // solo para poder enseñarlo si queda pendiente
+                hours: horas,
+                comedor: appState.selectedComedor,
+                activity: proyectoDeSede(appState.selectedComedor) === "PAAI" ? "PAAI" : "comedor",
+                operatorName: appState.operatorName,
+                operatorCedula: appState.operatorCedula,
+                date: formatDate(ahora),
+                time: formatTime(ahora),
+                uuid: generateUuid(),
+            };
+
+            try {
+                const res = await fetch(appState.scriptUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                appState.serverReachable = true;
+
+                if (data.status === "ok") {
+                    showToast(data.duplicate
+                        ? "Esas horas ya estaban apuntadas"
+                        : `${v.name}: +${data.hoursAdded} h (total ${data.totalHours})`);
+                    closeVolunteerConfirm();
+                    await refreshVolunteers(true);
+                } else {
+                    showToast(data.message || "No se pudo registrar", true);
+                    boton.disabled = false;
+                }
+            } catch (e) {
+                // Sin red no se pierde la jornada: va a la misma cola que las
+                // asistencias y sube sola cuando vuelva la conexión. El
+                // servidor rechaza el uuid repetido, así que un reintento
+                // nunca apunta las horas dos veces.
+                appState.serverReachable = false;
+                checkOnlineStatus();
+
+                appState.pendingSync.push(payload);
+                localStorage.setItem("pending_sync", JSON.stringify(appState.pendingSync));
+                updatePendingBadge();
+
+                showToast("Sin conexión: la jornada quedó guardada en el celular", false);
+                closeVolunteerConfirm();
+            } finally {
+                boton.innerText = "REGISTRAR";
+            }
         }
 
         // ---- REPORTE DE ERRORES A LA BITÁCORA DEL SERVIDOR ----
