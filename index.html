@@ -759,6 +759,37 @@
             border-color: var(--primary-light);
         }
 
+        /* Los campos de Ajustes van dentro de un .input-group, que es de la
+           pantalla de entrada —fondo blanco— y les ponía "background: white"
+           sin tocar el color de la letra. Como .input-dark sí pone la letra
+           blanca, el resultado era blanco sobre blanco: se escribía a ciegas.
+           Esa regla gana por especificidad (.input-group input), así que aquí
+           hay que ser más específico todavía, no basta con repetir .input-dark.
+
+           Va acotado a .settings-card para no tocar la pantalla de entrada,
+           donde los mismos .input-group sí deben verse claros. */
+        .settings-card .input-group input,
+        .settings-card .input-group select {
+            background-color: #1E293B;
+            color: var(--text-light);
+            border-color: rgba(255, 255, 255, 0.14);
+            /* Sin icono a la izquierda, los 38px de hueco no pintan nada. */
+            padding-left: 12px;
+        }
+
+        /* El desplegable lo dibuja el sistema: en un móvil con tema claro
+           las opciones salían blancas sobre blanco por el mismo motivo. */
+        .settings-card .input-group select option {
+            background-color: #1E293B;
+            color: var(--text-light);
+        }
+
+        /* Las etiquetas eran gris oscuro (pensadas para la tarjeta blanca
+           del login) y sobre la tarjeta oscura de Ajustes casi no se leían. */
+        .settings-card .input-group label {
+            color: var(--text-muted);
+        }
+
         /* --- Barra de Navegación Inferior --- */
         nav {
             position: fixed;
