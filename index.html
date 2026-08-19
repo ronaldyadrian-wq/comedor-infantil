@@ -904,6 +904,7 @@
                     <option value="Granadilla">Granadilla (comedor)</option>
                     <option value="Tres Ríos">Tres Ríos (comedor)</option>
                     <option value="Cipreses">Cipreses (PAAI)</option>
+                    <option value="Apoyo Académico">Apoyo Académico (Cipreses)</option>
                 </select>
             </div>
             
@@ -1015,6 +1016,7 @@
                     <option value="Granadilla">Granadilla (comedor)</option>
                     <option value="Tres Ríos">Tres Ríos (comedor)</option>
                     <option value="Cipreses">Cipreses (PAAI)</option>
+                    <option value="Apoyo Académico">Apoyo Académico (Cipreses)</option>
                 </select>
             </div>
             <div class="input-group">
@@ -1236,13 +1238,26 @@
                 nombre: "Manitas a la Mesa",
                 titulo: "Control de Asistencia",
                 etiquetaSede: "Comedor",
+                actividad: "comedor",
                 logo: "logo-manitas.png"
             },
             PAAI: {
                 nombre: "PAAI",
                 titulo: "Registro de llegadas",
                 etiquetaSede: "Sede",
+                actividad: "PAAI",
                 // El PAAI no tiene logo propio: lleva el de la asociación.
+                logo: "logo-conectados.png"
+            },
+            // Apoyo Académico son los MISMOS niños de Cipreses en otro
+            // programa. Por eso es un proyecto y no una sede: la lista de
+            // niños que descarga es la de Cipreses, y lo único que cambia
+            // es a qué hojas van las asistencias y las anotaciones.
+            AA: {
+                nombre: "Apoyo Académico",
+                titulo: "Registro de llegadas",
+                etiquetaSede: "Programa",
+                actividad: "Apoyo Académico",
                 logo: "logo-conectados.png"
             }
         };
@@ -1251,8 +1266,14 @@
         // selector de arriba (y en SEDES_PAAI del Apps Script).
         const SEDES_PAAI = ["Cipreses"];
 
+        // Debe escribirse igual que PROGRAMA_APOYO en el Apps Script: es el
+        // valor que viaja en cada registro y lo que decide la hoja destino.
+        const PROGRAMA_APOYO = "Apoyo Académico";
+
         function proyectoDeSede(sede) {
-            return SEDES_PAAI.indexOf((sede || "").toString().trim()) !== -1 ? "PAAI" : "MM";
+            const s = (sede || "").toString().trim();
+            if (s === PROGRAMA_APOYO) return "AA";
+            return SEDES_PAAI.indexOf(s) !== -1 ? "PAAI" : "MM";
         }
 
         function proyectoActual() {
@@ -2565,7 +2586,7 @@
                 volunteerName: v.name,   // solo para poder enseñarlo si queda pendiente
                 hours: horas,
                 comedor: appState.selectedComedor,
-                activity: proyectoDeSede(appState.selectedComedor) === "PAAI" ? "PAAI" : "comedor",
+                activity: proyectoActual().actividad,
                 operatorName: appState.operatorName,
                 operatorCedula: appState.operatorCedula,
                 date: formatDate(ahora),
