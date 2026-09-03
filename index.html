@@ -905,6 +905,7 @@
                     <option value="Tres Ríos">Tres Ríos (comedor)</option>
                     <option value="Cipreses">Cipreses (PAAI)</option>
                     <option value="Apoyo Académico">Apoyo Académico (Cipreses)</option>
+                    <option value="Club de Música">Club de Música (Cipreses)</option>
                 </select>
             </div>
             
@@ -1017,6 +1018,7 @@
                     <option value="Tres Ríos">Tres Ríos (comedor)</option>
                     <option value="Cipreses">Cipreses (PAAI)</option>
                     <option value="Apoyo Académico">Apoyo Académico (Cipreses)</option>
+                    <option value="Club de Música">Club de Música (Cipreses)</option>
                 </select>
             </div>
             <div class="input-group">
@@ -1259,6 +1261,17 @@
                 etiquetaSede: "Programa",
                 actividad: "Apoyo Académico",
                 logo: "logo-conectados.png"
+            },
+            // El Club de Música también ocurre en Cipreses, pero con lista
+            // de niños propia (CM-01…CM-18): 8 de sus 18 niños no están en
+            // el PAAI, así que no puede prestarse la lista como hace Apoyo
+            // Académico.
+            CM: {
+                nombre: "Club de Música",
+                titulo: "Registro de llegadas",
+                etiquetaSede: "Programa",
+                actividad: "Club de Música",
+                logo: "logo-conectados.png"
             }
         };
 
@@ -1266,13 +1279,16 @@
         // selector de arriba (y en SEDES_PAAI del Apps Script).
         const SEDES_PAAI = ["Cipreses"];
 
-        // Debe escribirse igual que PROGRAMA_APOYO en el Apps Script: es el
-        // valor que viaja en cada registro y lo que decide la hoja destino.
+        // Deben escribirse igual que PROGRAMA_APOYO y PROGRAMA_MUSICA en el
+        // Apps Script: es el valor que viaja en cada registro y lo que decide
+        // la hoja destino.
         const PROGRAMA_APOYO = "Apoyo Académico";
+        const PROGRAMA_MUSICA = "Club de Música";
 
         function proyectoDeSede(sede) {
             const s = (sede || "").toString().trim();
             if (s === PROGRAMA_APOYO) return "AA";
+            if (s === PROGRAMA_MUSICA) return "CM";
             return SEDES_PAAI.indexOf(s) !== -1 ? "PAAI" : "MM";
         }
 
@@ -1852,6 +1868,11 @@
         // Salen del propio código del niño: "PAAI 4-1-07" es el 7 del grupo
         // 4-1. Así, cuando la escuela mande el año que viene un 3-1, sus
         // niños aparecen solos en el buscador sin tocar nada aquí.
+        //
+        // El Club de Música no entra: sus códigos son CM-01…CM-18, sin
+        // grupo dentro, y son 18 niños que caben de una vez en la pantalla.
+        // Como esta función devuelve "" para ellos, la fila de grupos no se
+        // dibuja y la lista sale entera —que es justo lo que se quiere—.
         function grupoDe(child) {
             const m = /^PAAI\s+(\d+-\d+)-\d+$/i.exec(((child || {}).id || "").trim());
             return m ? m[1] : "";
