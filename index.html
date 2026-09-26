@@ -885,7 +885,7 @@
             <div class="input-group">
                 <label>Nombre Completo (en minúsculas)</label>
                 <i class="fa-solid fa-user"></i>
-                <input type="text" id="setup-name" placeholder="Ej. ronald">
+                <input type="text" id="setup-name" placeholder="Ej. ronald" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
             </div>
             
             <div class="input-group">
@@ -912,7 +912,9 @@
             <div class="input-group">
                 <label>URL de Google Apps Script</label>
                 <i class="fa-solid fa-link"></i>
-                <input type="text" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec">
+                <!-- Sin autocorrección ni mayúscula automática: el teclado del
+                     iPhone "corregía" la URL o el nombre sin que se notara. -->
+                <input type="text" inputmode="url" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
             </div>
             
             <button id="setup-btn" class="btn btn-primary" onclick="handleSetupSubmit()">
@@ -1005,7 +1007,7 @@
             <h3><i class="fa-solid fa-user-gear"></i> Datos del Operador</h3>
             <div class="input-group" style="margin-top: 8px;">
                 <label>Nombre del Operador</label>
-                <input type="text" id="settings-name" class="input-dark">
+                <input type="text" id="settings-name" class="input-dark" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
             </div>
             <div class="input-group">
                 <label>Cédula del Operador</label>
@@ -1023,7 +1025,7 @@
             </div>
             <div class="input-group">
                 <label>URL de Apps Script</label>
-                <input type="text" id="settings-url" class="input-dark">
+                <input type="text" inputmode="url" id="settings-url" class="input-dark" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
             </div>
             <button class="btn btn-primary" onclick="updateSettings()">GUARDAR Y RE-VALIDAR</button>
             <div id="settings-error" class="message-error" style="display:none; text-align: center;"></div>
@@ -1369,6 +1371,9 @@
             appState.operatorName = localStorage.getItem("operator_name") || "";
             appState.operatorCedula = localStorage.getItem("operator_cedula") || "";
             appState.scriptUrl = localStorage.getItem("script_url") || "";
+            // Una URL guardada antes de que existiera la limpieza puede traer
+            // caracteres invisibles; se limpia aquí para no arrastrarlos.
+            if (appState.scriptUrl) appState.scriptUrl = normalizarUrlScript(appState.scriptUrl).url || appState.scriptUrl;
             appState.selectedComedor = localStorage.getItem("selected_comedor") || "Granadilla";
             appState.isSetupDone = localStorage.getItem("setup_done") === "true";
             
@@ -1457,20 +1462,80 @@
             }
         }
 
+        // ---- VALIDACIÓN DE LA URL Y DEL OPERADOR ----
+        // Limpia la URL pegada: al copiarla de WhatsApp en el iPhone venían
+        // espacios o caracteres invisibles (marcas de dirección de texto) que
+        // trim() no quita, y la conexión fallaba sin que se viera nada raro.
+        // Devuelve { url } o { problema } con un mensaje para el voluntario.
+        function normalizarUrlScript(texto) {
+            let url = (texto || "").replace(/[\s​-‏‪-‮⁠﻿]/g, "");
+            if (!url) return { problema: "Falta la URL de Apps Script." };
+            if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+            url = url.replace(/^https?:\/\//i, "https://");
+            if (url.toLowerCase().indexOf("script.google.com/") === -1) {
+                return { problema: "Esa no es la URL de Apps Script: debe empezar con https://script.google.com/macros/s/" };
+            }
+            const fin = url.indexOf("/exec");
+            if (fin === -1) {
+                return { problema: /\/dev(\?|$)/.test(url)
+                    ? "Esa URL termina en /dev: hay que usar la que termina en /exec."
+                    : "A la URL le falta el final: tiene que terminar en /exec." };
+            }
+            // Lo que venga después de /exec (restos de otro mensaje, "?usp=…") sobra.
+            return { url: url.substring(0, fin + 5) };
+        }
+
+        // Pregunta al servidor si el operador está autorizado. Ante cualquier
+        // falla lanza un Error cuyo mensaje dice QUÉ falló, para mostrarlo en
+        // pantalla: antes todo terminaba en "Error al conectar", igual si no
+        // había internet, si la URL estaba mal o si Google devolvía una página
+        // de inicio de sesión, y no había forma de saber cuál era.
+        async function validarOperadorRemoto(url, name, cedula) {
+            const validationUrl = `${url}?action=validateOperator&name=${encodeURIComponent(name)}&cedula=${encodeURIComponent(cedula)}`;
+            const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+            const timer = ctrl ? setTimeout(() => ctrl.abort(), 30000) : null;
+            let response, texto;
+            try {
+                response = await fetch(validationUrl, ctrl ? { signal: ctrl.signal } : undefined);
+                texto = await response.text();
+            } catch (e) {
+                const detalle = e && e.name === "AbortError"
+                    ? "el servidor tardó más de 30 segundos en responder"
+                    : (e && e.message ? e.message : String(e));
+                throw new Error("El teléfono no pudo comunicarse con el servidor (" + detalle + ").");
+            } finally {
+                if (timer) clearTimeout(timer);
+            }
+            try {
+                return JSON.parse(texto);
+            } catch (e) {
+                const esPagina = /<html|<!doctype/i.test(texto);
+                throw new Error("El servidor respondió, pero no con datos de la app (código " + response.status +
+                    (esPagina ? ", devolvió una página web" : "") + "). Revisa que la URL sea la de /exec correcta.");
+            }
+        }
+
         // ---- REGISTRO Y AJUSTES INICIALES (LOGIN) ----
         async function handleSetupSubmit() {
             const name = document.getElementById("setup-name").value.trim();
             const cedula = document.getElementById("setup-cedula").value.trim();
-            const url = document.getElementById("setup-url").value.trim();
+            const urlLimpia = normalizarUrlScript(document.getElementById("setup-url").value);
+            const url = urlLimpia.url || "";
             const comedor = document.getElementById("setup-comedor").value;
             const btn = document.getElementById("setup-btn");
             const errDiv = document.getElementById("setup-error");
             const succDiv = document.getElementById("setup-success");
 
-            if (!name || !cedula || !url) {
+            if (!name || !cedula || !document.getElementById("setup-url").value.trim()) {
                 showMsg(errDiv, "Por favor completa todos los campos.");
                 return;
             }
+            if (urlLimpia.problema) {
+                showMsg(errDiv, urlLimpia.problema);
+                return;
+            }
+            // Que se vea la URL tal como se va a usar.
+            document.getElementById("setup-url").value = url;
 
             btn.disabled = true;
             btn.classList.add("btn-disabled");
@@ -1480,9 +1545,7 @@
 
             try {
                 // Petición GET al Apps Script para validar operador
-                const validationUrl = `${url}?action=validateOperator&name=${encodeURIComponent(name)}&cedula=${encodeURIComponent(cedula)}`;
-                const response = await fetch(validationUrl);
-                const result = await response.json();
+                const result = await validarOperadorRemoto(url, name, cedula);
 
                 if (result.status === "ok" && result.authorized) {
                     showMsg(succDiv, "¡Operador autorizado!");
@@ -1527,7 +1590,11 @@
                     btn.innerText = "VALIDAR E INGRESAR";
                 }
             } catch (e) {
-                showMsg(errDiv, "Error al conectar. Verifica la URL y tu conexión.");
+                const motivo = e && e.message ? e.message : String(e);
+                showMsg(errDiv, "Error al conectar. " + motivo);
+                // Si la URL sirve para escribir aunque la lectura falló, queda en "Errores".
+                reportarError("web", "validarOperador", motivo,
+                              "operador: " + name + " | " + navigator.userAgent, url);
                 btn.disabled = false;
                 btn.classList.remove("btn-disabled");
                 btn.innerText = "VALIDAR E INGRESAR";
@@ -1538,15 +1605,22 @@
         async function updateSettings() {
             const name = document.getElementById("settings-name").value.trim();
             const cedula = document.getElementById("settings-cedula").value.trim();
-            const url = document.getElementById("settings-url").value.trim();
+            const urlLimpia = normalizarUrlScript(document.getElementById("settings-url").value);
+            const url = urlLimpia.url || "";
             const comedor = document.getElementById("settings-comedor").value;
             const errDiv = document.getElementById("settings-error");
 
-            if (!name || !cedula || !url) {
+            if (!name || !cedula || !document.getElementById("settings-url").value.trim()) {
                 errDiv.innerText = "Los campos no pueden estar vacíos.";
                 errDiv.style.display = "block";
                 return;
             }
+            if (urlLimpia.problema) {
+                errDiv.innerText = urlLimpia.problema;
+                errDiv.style.display = "block";
+                return;
+            }
+            document.getElementById("settings-url").value = url;
 
             errDiv.style.display = "none";
             
@@ -1559,9 +1633,7 @@
 
             try {
                 showToast("Validando...", false);
-                const validationUrl = `${url}?action=validateOperator&name=${encodeURIComponent(name)}&cedula=${encodeURIComponent(cedula)}`;
-                const response = await fetch(validationUrl);
-                const result = await response.json();
+                const result = await validarOperadorRemoto(url, name, cedula);
 
                 if (result.status === "ok" && result.authorized) {
                     localStorage.setItem("operator_name", name);
@@ -1591,8 +1663,11 @@
                     errDiv.style.display = "block";
                 }
             } catch (e) {
-                errDiv.innerText = "Error al validar operador. Conexión fallida.";
+                const motivo = e && e.message ? e.message : String(e);
+                errDiv.innerText = "Error al validar operador. " + motivo;
                 errDiv.style.display = "block";
+                reportarError("web", "validarOperador", motivo,
+                              "operador: " + name + " | " + navigator.userAgent, url);
             }
         }
 
@@ -2656,10 +2731,13 @@
         // ---- REPORTE DE ERRORES A LA BITÁCORA DEL SERVIDOR ----
         // Escribe en la hoja "Errores" del Google Sheet. Nunca interrumpe la app:
         // si el envío falla, se ignora en silencio.
-        function reportarError(origen, accion, mensaje, detalle) {
+        // urlDestino solo hace falta antes de haber ingresado, cuando todavía
+        // no hay URL guardada (fallas de la pantalla de entrada).
+        function reportarError(origen, accion, mensaje, detalle, urlDestino) {
             try {
-                if (!appState.scriptUrl || !appState.isOnline) return;
-                fetch(appState.scriptUrl, {
+                const destino = urlDestino || appState.scriptUrl;
+                if (!destino || !appState.isOnline) return;
+                fetch(destino, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify({
