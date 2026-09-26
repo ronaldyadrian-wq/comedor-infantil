@@ -906,9 +906,10 @@
                     <option value="Cipreses">Cipreses (PAAI)</option>
                     <option value="Apoyo Académico">Apoyo Académico (Cipreses)</option>
                     <option value="Club de Música">Club de Música (Cipreses)</option>
+                    <option value="Envejecimiento Activo">Envejecimiento Activo (Tirrases)</option>
                 </select>
             </div>
-            
+
             <div class="input-group">
                 <label>URL de Google Apps Script</label>
                 <i class="fa-solid fa-link"></i>
@@ -956,7 +957,7 @@
                 <div class="corner bottom-right"></div>
             </div>
         </div>
-        <p class="scan-helper-text">Apunta la cámara al código QR del niño</p>
+        <p class="scan-helper-text" id="scan-helper-attendance">Apunta la cámara al código QR del niño</p>
         
         <button class="fab-search" onclick="openSearchModal('attendance')">
             <i class="fa-solid fa-search"></i>
@@ -1021,6 +1022,7 @@
                     <option value="Cipreses">Cipreses (PAAI)</option>
                     <option value="Apoyo Académico">Apoyo Académico (Cipreses)</option>
                     <option value="Club de Música">Club de Música (Cipreses)</option>
+                    <option value="Envejecimiento Activo">Envejecimiento Activo (Tirrases)</option>
                 </select>
             </div>
             <div class="input-group">
@@ -1274,6 +1276,18 @@
                 etiquetaSede: "Programa",
                 actividad: "Club de Música",
                 logo: "logo-conectados.png"
+            },
+            // Envejecimiento Activo: adultos mayores en Tirrases, con lista
+            // propia (EA-01…). Es el único proyecto que no es de niños, por
+            // eso lleva persona/personas: el resto usa "niño" por defecto.
+            EA: {
+                nombre: "Envejecimiento Activo",
+                titulo: "Registro de llegadas",
+                etiquetaSede: "Programa",
+                actividad: "Envejecimiento Activo",
+                logo: "logo-conectados.png",
+                persona: "participante",
+                personas: "participantes"
             }
         };
 
@@ -1286,16 +1300,26 @@
         // la hoja destino.
         const PROGRAMA_APOYO = "Apoyo Académico";
         const PROGRAMA_MUSICA = "Club de Música";
+        const PROGRAMA_ENVEJECIMIENTO = "Envejecimiento Activo";
 
         function proyectoDeSede(sede) {
             const s = (sede || "").toString().trim();
             if (s === PROGRAMA_APOYO) return "AA";
             if (s === PROGRAMA_MUSICA) return "CM";
+            if (s === PROGRAMA_ENVEJECIMIENTO) return "EA";
             return SEDES_PAAI.indexOf(s) !== -1 ? "PAAI" : "MM";
         }
 
         function proyectoActual() {
             return PROYECTOS_APP[proyectoDeSede(appState.selectedComedor)];
+        }
+
+        // Cómo se llama a quien llega en el proyecto activo.
+        function personaActual()  { return proyectoActual().persona  || "niño"; }
+        function personasActual() { return proyectoActual().personas || "niños"; }
+
+        function mostrarConteoCatalogo(n) {
+            document.getElementById("children-count").innerText = `${n} ${personasActual()}`;
         }
 
         // ---- ESTADO DE LA APP ----
@@ -1379,7 +1403,7 @@
             
             // Cargar niños locales
             appState.children = JSON.parse(localStorage.getItem("children_catalog")) || [];
-            document.getElementById("children-count").innerText = `${appState.children.length} niños`;
+            mostrarConteoCatalogo(appState.children.length);
 
             // Y la última lista de voluntarios descargada, para poder
             // registrar jornadas también cuando no hay internet.
@@ -1433,6 +1457,10 @@
                 logo.src = p.logo;
                 logo.alt = p.nombre;
             }
+
+            document.getElementById("scan-helper-attendance").innerText =
+                `Apunta la cámara al código QR del ${personaActual()}`;
+            mostrarConteoCatalogo((appState.children || []).length);
         }
 
         // ---- MONITOREO DE RED ----
@@ -2181,7 +2209,7 @@
                 // Bloqueo local: un niño solo puede tener UNA asistencia por día.
                 if (getAttendedToday().includes(child.id)) {
                     closeConfirmModal();
-                    showToast("Este niño YA tiene asistencia registrada hoy", true);
+                    showToast(`Este ${personaActual()} YA tiene asistencia registrada hoy`, true);
                     return;
                 }
                 syncPayload.action = "addAttendance";
@@ -2311,7 +2339,7 @@
                 if (result.status === "ok") {
                     appState.children = result.data;
                     localStorage.setItem("children_catalog", JSON.stringify(result.data));
-                    document.getElementById("children-count").innerText = `${result.data.length} niños`;
+                    mostrarConteoCatalogo(result.data.length);
                     showToast("¡Catálogo local actualizado!", false);
                 } else {
                     const noAutorizado = (result.message || "").toLowerCase().includes("no autorizado");
