@@ -148,7 +148,9 @@
             padding: 10px 12px 10px 38px;
             border: 1.5px solid #CBD5E1;
             border-radius: 12px;
-            font-size: 14px;
+            /* 16 px como mínimo en todos los campos: con menos, el iPhone
+               agranda la pantalla solo al tocarlos y no la vuelve a achicar. */
+            font-size: 16px;
             outline: none;
             transition: border-color 0.2s;
             background-color: white;
@@ -440,6 +442,11 @@
             font-size: 20px;
             cursor: pointer;
             color: #64748B;
+            /* Zona para el dedo de 44 px sin mover la X de donde se ve:
+               el relleno agranda el área y el margen negativo lo compensa. */
+            min-width: 44px;
+            min-height: 44px;
+            margin: -10px -12px -10px 0;
         }
 
         .search-input-container {
@@ -459,7 +466,7 @@
             padding: 12px 12px 12px 38px;
             border: 1.5px solid #E2E8F0;
             border-radius: 12px;
-            font-size: 14px;
+            font-size: 16px;   /* ver .input-group input: evita el zoom del iPhone */
             outline: none;
         }
 
@@ -751,7 +758,7 @@
             background-color: #1E293B;
             color: var(--text-light);
             border-radius: 12px;
-            font-size: 14px;
+            font-size: 16px;   /* ver .input-group input: evita el zoom del iPhone */
             outline: none;
         }
 
@@ -806,7 +813,13 @@
             z-index: 100;
         }
 
+        /* Cada botón ocupa su cuarto entero de la barra y toda su altura:
+           antes solo respondía el dibujo y la palabra (21x34 px el de
+           "Lista"), y en el teléfono había que atinarle. */
         .nav-item {
+            flex: 1;
+            align-self: stretch;
+            justify-content: center;
             display: flex;
             flex-direction: column;
             align-items: center;
