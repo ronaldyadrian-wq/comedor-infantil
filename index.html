@@ -1364,6 +1364,12 @@
 
         // ---- INICIALIZACIÓN ----
         window.addEventListener('load', () => {
+            // Si el teléfono no deja guardar datos, la app no puede trabajar
+            // (ni la cola de pendientes): se explica en vez de fallar a medias.
+            if (almacenamientoBloqueado()) {
+                avisarAlmacenamientoBloqueado();
+                return;
+            }
             loadSettings();
             checkOnlineStatus();
 
@@ -1402,6 +1408,34 @@
                 }
             });
         });
+
+        // En iPhone, con "Bloquear todas las cookies" encendido en los ajustes
+        // de Safari, cualquier uso de localStorage lanza SecurityError ("The
+        // operation is insecure"). No se cae a una memoria temporal: los
+        // registros sin subir se perderían al cerrar Safari.
+        const MSG_ALMACENAMIENTO_BLOQUEADO =
+            "Este teléfono no deja que la app guarde datos. En iPhone: abrí Ajustes › Apps › Safari " +
+            "y apagá «Bloquear todas las cookies». Si estás en una pestaña privada, abrí la app en una " +
+            "pestaña normal. Luego cerrá esta página y volvé a abrirla.";
+
+        function almacenamientoBloqueado() {
+            try {
+                const k = "__prueba_almacenamiento";
+                window.localStorage.setItem(k, "1");
+                window.localStorage.removeItem(k);
+                return false;
+            } catch (e) {
+                return true;
+            }
+        }
+
+        function avisarAlmacenamientoBloqueado() {
+            document.getElementById("setup-screen").style.display = "flex";
+            showMsg(document.getElementById("setup-error"), MSG_ALMACENAMIENTO_BLOQUEADO);
+            const btn = document.getElementById("setup-btn");
+            btn.disabled = true;
+            btn.classList.add("btn-disabled");
+        }
 
         // ---- CARGAR AJUSTES ----
         function loadSettings() {
@@ -1632,7 +1666,12 @@
                 }
             } catch (e) {
                 const motivo = e && e.message ? e.message : String(e);
-                showMsg(errDiv, "Error al conectar. " + motivo);
+                succDiv.style.display = "none";
+                if (e && e.name === "SecurityError") {
+                    showMsg(errDiv, MSG_ALMACENAMIENTO_BLOQUEADO);
+                } else {
+                    showMsg(errDiv, "Error al conectar. " + motivo);
+                }
                 // Si la URL sirve para escribir aunque la lectura falló, queda en "Errores".
                 reportarError("web", "validarOperador", motivo,
                               "operador: " + name + " | " + navigator.userAgent, url);
